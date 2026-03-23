@@ -1,9 +1,11 @@
+import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import { normalizeConfig, type DisplayConfig } from '../lib/config';
 import {
   clearDashboardHistory,
   type DashboardHistoryEntry,
 } from '../lib/dashboard-history';
-import { DEMO_PRESETS } from '../lib/presets';
+import { DEMO_PRESETS, type Preset } from '../lib/presets';
 import { AppIcon } from '@firstform/campus-hub-engine';
 
 const DEFAULT_GRID_COLS = 12;
@@ -26,6 +28,11 @@ export interface PresetsTabProps {
   currentConfigSignature: string;
   aspectRatio: number;
   setAspectRatio: (ratio: number) => void;
+  className?: string;
+  style?: CSSProperties;
+  renderDraftItem?: (props: { entry: DashboardHistoryEntry; isCurrent: boolean; onClick: () => void }) => ReactNode;
+  renderPresetItem?: (props: { preset: Preset; onClick: () => void }) => ReactNode;
+  renderAspectRatioOption?: (props: { label: string; desc: string; isActive: boolean; onClick: () => void }) => ReactNode;
 }
 
 export default function PresetsTab({
@@ -37,9 +44,14 @@ export default function PresetsTab({
   currentConfigSignature,
   aspectRatio,
   setAspectRatio,
+  className,
+  style,
+  renderDraftItem,
+  renderPresetItem,
+  renderAspectRatioOption,
 }: PresetsTabProps) {
   return (
-    <>
+    <div className={className ?? ''} style={style}>
       <div className="bg-[var(--ui-panel-bg)] rounded-xl p-4 space-y-3 border border-[color:var(--ui-panel-border)]">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -76,6 +88,12 @@ export default function PresetsTab({
             {recentDashboards.map((entry, index) => {
               const snapshot = entry.config;
               const isCurrent = entry.signature === currentConfigSignature;
+              const handleClick = () => hydrateEditorState(snapshot);
+
+              if (renderDraftItem) {
+                return <div key={entry.id}>{renderDraftItem({ entry, isCurrent, onClick: handleClick })}</div>;
+              }
+
               const widgetCount = snapshot.layout.length;
               const timestamp = new Intl.DateTimeFormat(undefined, {
                 dateStyle: 'medium',
@@ -85,7 +103,7 @@ export default function PresetsTab({
               return (
                 <button
                   key={entry.id}
-                  onClick={() => hydrateEditorState(snapshot)}
+                  onClick={handleClick}
                   className="w-full p-3 rounded-lg bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border border-[color:var(--ui-item-border)] hover:border-[var(--ui-item-border-hover)] transition-all text-left"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -130,46 +148,63 @@ export default function PresetsTab({
         )}
       </div>
 
-      <div className="bg-[var(--ui-panel-bg)] rounded-xl p-4 space-y-3 border border-[color:var(--ui-panel-border)]">
+      <div className="bg-[var(--ui-panel-bg)] rounded-xl p-4 space-y-3 border border-[color:var(--ui-panel-border)] mt-4">
         <h2 className="font-bold text-lg flex items-center gap-2">
           <span className="text-[var(--color-accent)]">Demo Presets</span>
         </h2>
         <p className="text-xs text-white/50">Load a pre-built layout to get started quickly</p>
         <div className="grid grid-cols-2 gap-2">
-          {DEMO_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              onClick={() => hydrateEditorState(normalizeConfig(preset.config))}
-              className="p-2 rounded-lg bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border border-[color:var(--ui-item-border)] hover:border-[var(--ui-item-border-hover)] transition-all text-left group"
-            >
-              <div className="mb-1">
-                <AppIcon name={preset.icon} className="w-5 h-5 text-white/80" />
-              </div>
-              <div className="text-xs font-medium group-hover:text-[var(--color-accent)] transition-colors">{preset.name}</div>
-            </button>
-          ))}
+          {DEMO_PRESETS.map((preset) => {
+            const handleClick = () => hydrateEditorState(normalizeConfig(preset.config));
+
+            if (renderPresetItem) {
+              return <div key={preset.id}>{renderPresetItem({ preset, onClick: handleClick })}</div>;
+            }
+
+            return (
+              <button
+                key={preset.id}
+                onClick={handleClick}
+                className="p-2 rounded-lg bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border border-[color:var(--ui-item-border)] hover:border-[var(--ui-item-border-hover)] transition-all text-left group"
+              >
+                <div className="mb-1">
+                  <AppIcon name={preset.icon} className="w-5 h-5 text-white/80" />
+                </div>
+                <div className="text-xs font-medium group-hover:text-[var(--color-accent)] transition-colors">{preset.name}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="bg-[var(--ui-panel-bg)] border border-[color:var(--ui-panel-border)] rounded-xl p-4 space-y-3">
+      <div className="bg-[var(--ui-panel-bg)] border border-[color:var(--ui-panel-border)] rounded-xl p-4 space-y-3 mt-4">
         <h2 className="font-bold text-lg">Preview Aspect Ratio</h2>
         <div className="grid grid-cols-2 gap-2">
-          {ASPECT_RATIOS.map((ar) => (
-            <button
-              key={ar.label}
-              onClick={() => setAspectRatio(ar.value)}
-              className={`p-2 rounded-lg text-sm transition-all ${
-                aspectRatio === ar.value
-                  ? 'bg-[var(--ui-item-hover)] border-[var(--ui-item-border-hover)]'
-                  : 'bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border-[color:var(--ui-item-border)]'
-              } border`}
-            >
-              <div className="font-medium">{ar.label}</div>
-              <div className="text-xs text-white/50">{ar.desc}</div>
-            </button>
-          ))}
+          {ASPECT_RATIOS.map((ar) => {
+            const isActive = aspectRatio === ar.value;
+            const handleClick = () => setAspectRatio(ar.value);
+
+            if (renderAspectRatioOption) {
+              return <div key={ar.label}>{renderAspectRatioOption({ label: ar.label, desc: ar.desc, isActive, onClick: handleClick })}</div>;
+            }
+
+            return (
+              <button
+                key={ar.label}
+                onClick={handleClick}
+                className={`p-2 rounded-lg text-sm transition-all ${
+                  isActive
+                    ? 'bg-[var(--ui-item-hover)] border-[var(--ui-item-border-hover)]'
+                    : 'bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border-[color:var(--ui-item-border)]'
+                } border`}
+              >
+                <div className="font-medium">{ar.label}</div>
+                <div className="text-xs text-white/50">{ar.desc}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
-    </>
+    </div>
   );
 }

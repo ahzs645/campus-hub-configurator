@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import type { DisplayConfig } from '../lib/config';
 
 const COLOR_PRESETS = [
@@ -14,19 +16,26 @@ const COLOR_PRESETS = [
 export interface SettingsTabProps {
   config: DisplayConfig;
   setConfig: React.Dispatch<React.SetStateAction<DisplayConfig>>;
+  className?: string;
+  style?: CSSProperties;
+  renderColorPresetButton?: (props: { preset: { name: string; primary: string; accent: string; background: string }; isActive: boolean; onClick: () => void }) => ReactNode;
+  renderInput?: (props: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) => ReactNode;
+  renderSwitch?: (props: { label: string; description?: string; checked: boolean; onChange: (checked: boolean) => void }) => ReactNode;
 }
 
-export default function SettingsTab({ config, setConfig }: SettingsTabProps) {
+export default function SettingsTab({ config, setConfig, className, style, renderColorPresetButton, renderInput, renderSwitch }: SettingsTabProps) {
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${className ?? ''}`} style={style}>
       <div>
         <label className="block text-sm text-white/60 mb-1">School Name</label>
-        <input
-          type="text"
-          value={config.schoolName}
-          onChange={(e) => setConfig((prev) => ({ ...prev, schoolName: e.target.value }))}
-          className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none"
-        />
+        {renderInput ? renderInput({ label: 'School Name', value: config.schoolName, onChange: (v) => setConfig((prev) => ({ ...prev, schoolName: v })), type: 'text' }) : (
+          <input
+            type="text"
+            value={config.schoolName}
+            onChange={(e) => setConfig((prev) => ({ ...prev, schoolName: e.target.value }))}
+            className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none"
+          />
+        )}
       </div>
 
       {/* Logo */}
@@ -55,18 +64,20 @@ export default function SettingsTab({ config, setConfig }: SettingsTabProps) {
           <option value="svg">Raw SVG</option>
         </select>
         {config.logo?.type === 'url' && (
-          <input
-            type="text"
-            placeholder="https://example.com/logo.svg"
-            value={config.logo.value}
-            onChange={(e) =>
-              setConfig((prev) => ({
-                ...prev,
-                logo: { type: 'url', value: e.target.value },
-              }))
-            }
-            className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm"
-          />
+          renderInput ? renderInput({ label: 'Logo URL', value: config.logo.value, onChange: (v) => setConfig((prev) => ({ ...prev, logo: { type: 'url', value: v } })), type: 'text', placeholder: 'https://example.com/logo.svg' }) : (
+            <input
+              type="text"
+              placeholder="https://example.com/logo.svg"
+              value={config.logo.value}
+              onChange={(e) =>
+                setConfig((prev) => ({
+                  ...prev,
+                  logo: { type: 'url', value: e.target.value },
+                }))
+              }
+              className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm"
+            />
+          )
         )}
         {config.logo?.type === 'svg' && (
           <textarea
@@ -99,21 +110,23 @@ export default function SettingsTab({ config, setConfig }: SettingsTabProps) {
           <label className="block text-sm font-medium text-white/80">Coming Soon</label>
           <p className="text-xs text-white/40">Blur entire display with a &quot;Coming Soon&quot; overlay</p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={!!config.comingSoon}
-          onClick={() => setConfig((prev) => ({ ...prev, comingSoon: !prev.comingSoon || undefined }))}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-            config.comingSoon ? 'bg-[var(--ui-switch-on)]' : 'bg-[var(--ui-switch-off)]'
-          }`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              config.comingSoon ? 'translate-x-6' : 'translate-x-1'
+        {renderSwitch ? renderSwitch({ label: 'Coming Soon', description: 'Blur entire display with a "Coming Soon" overlay', checked: !!config.comingSoon, onChange: (checked) => setConfig((prev) => ({ ...prev, comingSoon: checked || undefined })) }) : (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!config.comingSoon}
+            onClick={() => setConfig((prev) => ({ ...prev, comingSoon: !prev.comingSoon || undefined }))}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+              config.comingSoon ? 'bg-[var(--ui-switch-on)]' : 'bg-[var(--ui-switch-off)]'
             }`}
-          />
-        </button>
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                config.comingSoon ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        )}
       </div>
 
       <div>
@@ -124,20 +137,25 @@ export default function SettingsTab({ config, setConfig }: SettingsTabProps) {
               config.theme.primary === preset.primary &&
               config.theme.accent === preset.accent &&
               config.theme.background === preset.background;
+            const handleClick = () =>
+              setConfig((prev) => ({
+                ...prev,
+                theme: {
+                  primary: preset.primary,
+                  accent: preset.accent,
+                  background: preset.background,
+                },
+              }));
+
+            if (renderColorPresetButton) {
+              return <div key={preset.name}>{renderColorPresetButton({ preset, isActive, onClick: handleClick })}</div>;
+            }
+
             return (
               <button
                 key={preset.name}
                 title={preset.name}
-                onClick={() =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    theme: {
-                      primary: preset.primary,
-                      accent: preset.accent,
-                      background: preset.background,
-                    },
-                  }))
-                }
+                onClick={handleClick}
                 className={`group relative h-8 rounded-lg overflow-hidden transition-all ${
                   isActive
                     ? 'ring-2 ring-white ring-offset-1 ring-offset-transparent scale-105'
@@ -191,13 +209,15 @@ export default function SettingsTab({ config, setConfig }: SettingsTabProps) {
       {/* CORS Proxy */}
       <div className="pt-2">
         <label className="block text-sm text-white/60 mb-1">CORS Proxy URL</label>
-        <input
-          type="text"
-          value={config.corsProxy ?? ''}
-          onChange={(e) => setConfig((prev) => ({ ...prev, corsProxy: e.target.value }))}
-          placeholder="https://your-worker.workers.dev/?url="
-          className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm font-mono"
-        />
+        {renderInput ? renderInput({ label: 'CORS Proxy URL', value: config.corsProxy ?? '', onChange: (v) => setConfig((prev) => ({ ...prev, corsProxy: v })), type: 'text', placeholder: 'https://your-worker.workers.dev/?url=' }) : (
+          <input
+            type="text"
+            value={config.corsProxy ?? ''}
+            onChange={(e) => setConfig((prev) => ({ ...prev, corsProxy: e.target.value }))}
+            placeholder="https://your-worker.workers.dev/?url="
+            className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm font-mono"
+          />
+        )}
         <p className="text-xs text-white/40 mt-1">
           Used by widgets that fetch external data (weather, news, climbing gym). Deploy your own Cloudflare Worker for reliable access.
         </p>

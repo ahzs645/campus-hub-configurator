@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import { Suspense, lazy, type RefObject } from 'react';
 import type { DisplayConfig } from '../lib/config';
 import type { GridStackItem } from '@firstform/campus-hub-engine';
@@ -51,6 +53,10 @@ export interface EditorAreaProps {
     nextSize: number,
   ) => import('../lib/config').WidgetConfig[];
   offGridCount: number;
+  className?: string;
+  style?: CSSProperties;
+  renderEmptyState?: () => ReactNode;
+  renderEditorHeader?: (props: { isMobile: boolean; gridCols: number; gridRows: number }) => ReactNode;
 }
 
 export default function EditorArea({
@@ -75,108 +81,114 @@ export default function EditorArea({
   renderGridItem,
   remapLayout,
   offGridCount,
+  className,
+  style,
+  renderEmptyState,
+  renderEditorHeader,
 }: EditorAreaProps) {
   return (
-    <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <main className={`flex-1 flex flex-col min-w-0 overflow-hidden ${className ?? ''}`} style={style}>
       {/* Editor Header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 gap-4 border-b border-[color:var(--ui-panel-border)]">
-        <h2 className="font-display font-bold text-sm" style={{ color: config.theme.accent }}>
-          {isMobile ? 'Preview' : 'Layout Editor'}
-        </h2>
-        {!isMobile && (
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs text-white/60">
-              <span className="text-white/40">Grid</span>
-              <select
-                id="grid-cols"
-                value={gridCols}
-                onChange={(e) => {
-                  const nextCols = Number(e.target.value);
-                  const prevCols = gridCols;
-                  setGridCols(nextCols);
-                  setConfig((prev) => ({
-                    ...prev,
-                    gridCols: nextCols,
-                    layout: remapLayout(prev.layout, 'x', prevCols, nextCols),
-                  }));
-                }}
-                className="px-2 py-1 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-white/80 text-xs outline-none focus:border-[var(--ui-item-border-hover)]"
-                title="Columns"
-              >
-                {COL_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.value}c
-                  </option>
-                ))}
-              </select>
-              <span className="text-white/30">x</span>
-              <select
-                id="grid-rows"
-                value={gridRows}
-                onChange={(e) => {
-                  const nextRows = Number(e.target.value);
-                  const prevRows = gridRows;
-                  setGridRows(nextRows);
-                  setConfig((prev) => ({
-                    ...prev,
-                    gridRows: nextRows,
-                    layout: remapLayout(prev.layout, 'y', prevRows, nextRows),
-                  }));
-                }}
-                className="px-2 py-1 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-white/80 text-xs outline-none focus:border-[var(--ui-item-border-hover)]"
-                title="Rows"
-              >
-                {ROW_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.value}r
-                  </option>
-                ))}
-              </select>
+      {renderEditorHeader ? renderEditorHeader({ isMobile, gridCols, gridRows }) : (
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 gap-4 border-b border-[color:var(--ui-panel-border)]">
+          <h2 className="font-display font-bold text-sm" style={{ color: config.theme.accent }}>
+            {isMobile ? 'Preview' : 'Layout Editor'}
+          </h2>
+          {!isMobile && (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-xs text-white/60">
+                <span className="text-white/40">Grid</span>
+                <select
+                  id="grid-cols"
+                  value={gridCols}
+                  onChange={(e) => {
+                    const nextCols = Number(e.target.value);
+                    const prevCols = gridCols;
+                    setGridCols(nextCols);
+                    setConfig((prev) => ({
+                      ...prev,
+                      gridCols: nextCols,
+                      layout: remapLayout(prev.layout, 'x', prevCols, nextCols),
+                    }));
+                  }}
+                  className="px-2 py-1 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-white/80 text-xs outline-none focus:border-[var(--ui-item-border-hover)]"
+                  title="Columns"
+                >
+                  {COL_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.value}c
+                    </option>
+                  ))}
+                </select>
+                <span className="text-white/30">x</span>
+                <select
+                  id="grid-rows"
+                  value={gridRows}
+                  onChange={(e) => {
+                    const nextRows = Number(e.target.value);
+                    const prevRows = gridRows;
+                    setGridRows(nextRows);
+                    setConfig((prev) => ({
+                      ...prev,
+                      gridRows: nextRows,
+                      layout: remapLayout(prev.layout, 'y', prevRows, nextRows),
+                    }));
+                  }}
+                  className="px-2 py-1 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-white/80 text-xs outline-none focus:border-[var(--ui-item-border-hover)]"
+                  title="Rows"
+                >
+                  {ROW_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.value}r
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="text-xs text-white/40">
+                Drag to reposition. Handles to resize.
+              </span>
             </div>
-            <span className="text-xs text-white/40">
-              Drag to reposition. Handles to resize.
-            </span>
-          </div>
-        )}
-        {isMobile && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wide text-white/40">
-              Zoom
-            </span>
-            <button
-              type="button"
-              onClick={() => setMobileZoom((prev) => Math.max(MOBILE_ZOOM_MIN, prev - MOBILE_ZOOM_STEP))}
-              disabled={clampedMobileZoom <= MOBILE_ZOOM_MIN}
-              className={`w-7 h-7 rounded-md border border-[color:var(--ui-panel-border)] text-sm transition-colors ${
-                clampedMobileZoom <= MOBILE_ZOOM_MIN
-                  ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:bg-[var(--ui-item-hover)]'
-              }`}
-              aria-label="Zoom out preview"
-              title="Zoom out"
-            >
-              -
-            </button>
-            <span className="text-xs text-white/60 tabular-nums min-w-[42px] text-center">
-              {Math.round(clampedMobileZoom * 100)}%
-            </span>
-            <button
-              type="button"
-              onClick={() => setMobileZoom((prev) => Math.min(MOBILE_ZOOM_MAX, prev + MOBILE_ZOOM_STEP))}
-              disabled={clampedMobileZoom >= MOBILE_ZOOM_MAX}
-              className={`w-7 h-7 rounded-md border border-[color:var(--ui-panel-border)] text-sm transition-colors ${
-                clampedMobileZoom >= MOBILE_ZOOM_MAX
-                  ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:bg-[var(--ui-item-hover)]'
-              }`}
-              aria-label="Zoom in preview"
-              title="Zoom in"
-            >
-              +
-            </button>
-          </div>
-        )}
-      </div>
+          )}
+          {isMobile && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-wide text-white/40">
+                Zoom
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileZoom((prev) => Math.max(MOBILE_ZOOM_MIN, prev - MOBILE_ZOOM_STEP))}
+                disabled={clampedMobileZoom <= MOBILE_ZOOM_MIN}
+                className={`w-7 h-7 rounded-md border border-[color:var(--ui-panel-border)] text-sm transition-colors ${
+                  clampedMobileZoom <= MOBILE_ZOOM_MIN
+                    ? 'opacity-40 cursor-not-allowed'
+                    : 'hover:bg-[var(--ui-item-hover)]'
+                }`}
+                aria-label="Zoom out preview"
+                title="Zoom out"
+              >
+                -
+              </button>
+              <span className="text-xs text-white/60 tabular-nums min-w-[42px] text-center">
+                {Math.round(clampedMobileZoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileZoom((prev) => Math.min(MOBILE_ZOOM_MAX, prev + MOBILE_ZOOM_STEP))}
+                disabled={clampedMobileZoom >= MOBILE_ZOOM_MAX}
+                className={`w-7 h-7 rounded-md border border-[color:var(--ui-panel-border)] text-sm transition-colors ${
+                  clampedMobileZoom >= MOBILE_ZOOM_MAX
+                    ? 'opacity-40 cursor-not-allowed'
+                    : 'hover:bg-[var(--ui-item-hover)]'
+                }`}
+                aria-label="Zoom in preview"
+                title="Zoom in"
+              >
+                +
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Full-bleed Grid Area */}
       <div
@@ -228,15 +240,17 @@ export default function EditorArea({
           )}
 
           {config.layout.length === 0 && effectivePreviewHeight > 0 && (
-            <div
-              className="absolute inset-x-0 top-0 flex items-center justify-center text-white/30 pointer-events-none"
-              style={{ height: effectivePreviewHeight }}
-            >
-              <div className="text-center">
-                <p className={`mb-2 ${isMobile ? 'text-sm' : 'text-lg'}`}>No widgets added</p>
-                <p className="text-xs md:text-sm">{isMobile ? 'Open the sidebar to add widgets' : 'Click widgets in the sidebar to add them'}</p>
+            renderEmptyState ? renderEmptyState() : (
+              <div
+                className="absolute inset-x-0 top-0 flex items-center justify-center text-white/30 pointer-events-none"
+                style={{ height: effectivePreviewHeight }}
+              >
+                <div className="text-center">
+                  <p className={`mb-2 ${isMobile ? 'text-sm' : 'text-lg'}`}>No widgets added</p>
+                  <p className="text-xs md:text-sm">{isMobile ? 'Open the sidebar to add widgets' : 'Click widgets in the sidebar to add them'}</p>
+                </div>
               </div>
-            </div>
+            )
           )}
         </div>
       </div>

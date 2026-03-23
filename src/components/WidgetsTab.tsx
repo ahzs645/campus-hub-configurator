@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import type { DisplayConfig, WidgetConfig } from '../lib/config';
 import { getWidget, AppIcon } from '@firstform/campus-hub-engine';
 
@@ -10,6 +12,11 @@ export interface WidgetsTabProps {
   placementError: string | null;
   offGridIds: Set<string>;
   offGridCount: number;
+  className?: string;
+  style?: CSSProperties;
+  renderWidgetItem?: (props: { widget: WidgetConfig; widgetDef: any; isOffGrid: boolean; onEdit: () => void; onRemove: () => void }) => ReactNode;
+  renderAddButton?: (props: { onClick: () => void; theme: DisplayConfig['theme'] }) => ReactNode;
+  renderEmptyState?: () => ReactNode;
 }
 
 export default function WidgetsTab({
@@ -21,9 +28,14 @@ export default function WidgetsTab({
   placementError,
   offGridIds,
   offGridCount,
+  className,
+  style,
+  renderWidgetItem,
+  renderAddButton,
+  renderEmptyState,
 }: WidgetsTabProps) {
   return (
-    <>
+    <div className={className ?? ''} style={style}>
       <div className="flex items-center justify-between">
         <h2 className="font-bold text-lg">
           Widgets
@@ -41,14 +53,16 @@ export default function WidgetsTab({
         )}
       </div>
 
-      <button
-        onClick={() => setShowWidgetLibrary(true)}
-        className="w-full py-2.5 rounded-lg font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-        style={{ backgroundColor: config.theme.accent, color: config.theme.background }}
-      >
-        <span className="text-lg leading-none">+</span>
-        Add Widget
-      </button>
+      {renderAddButton ? renderAddButton({ onClick: () => setShowWidgetLibrary(true), theme: config.theme }) : (
+        <button
+          onClick={() => setShowWidgetLibrary(true)}
+          className="w-full py-2.5 rounded-lg font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+          style={{ backgroundColor: config.theme.accent, color: config.theme.background }}
+        >
+          <span className="text-lg leading-none">+</span>
+          Add Widget
+        </button>
+      )}
 
       {placementError && (
         <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
@@ -63,17 +77,24 @@ export default function WidgetsTab({
       )}
 
       {config.layout.length === 0 ? (
-        <div className="text-center py-8 text-white/30">
-          <div className="text-3xl mb-2">+</div>
-          <p className="text-sm">No widgets yet</p>
-          <p className="text-xs mt-1">Click &quot;Add Widget&quot; to get started</p>
-        </div>
+        renderEmptyState ? renderEmptyState() : (
+          <div className="text-center py-8 text-white/30">
+            <div className="text-3xl mb-2">+</div>
+            <p className="text-sm">No widgets yet</p>
+            <p className="text-xs mt-1">Click &quot;Add Widget&quot; to get started</p>
+          </div>
+        )
       ) : (
         <div className="space-y-2">
           {config.layout.map((widget) => {
             const widgetDef = getWidget(widget.type);
             if (!widgetDef) return null;
             const isOffGrid = offGridIds.has(widget.id);
+
+            if (renderWidgetItem) {
+              return <div key={widget.id}>{renderWidgetItem({ widget, widgetDef, isOffGrid, onEdit: () => setEditingWidget(widget), onRemove: () => removeWidget(widget.id) })}</div>;
+            }
+
             return (
               <div
                 key={widget.id}
@@ -128,6 +149,6 @@ export default function WidgetsTab({
           })}
         </div>
       )}
-    </>
+    </div>
   );
 }

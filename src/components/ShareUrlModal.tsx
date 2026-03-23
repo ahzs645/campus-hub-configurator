@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import type { DisplayConfig, ShareUrlMode } from '../lib/config';
 
 const URL_SHARE_OPTIONS: Array<{ value: ShareUrlMode; label: string; description: string }> = [
@@ -21,6 +23,10 @@ export interface ShareUrlModalProps {
   setShowShareModal: (show: boolean) => void;
   handleShareUrlModeChange: (mode: ShareUrlMode) => void;
   copyUrl: () => void;
+  className?: string;
+  style?: CSSProperties;
+  renderModeOption?: (props: { option: { value: string; label: string; description: string }; isActive: boolean; onClick: () => void }) => ReactNode;
+  renderCopyButton?: (props: { onClick: () => void; copied: boolean; label: string }) => ReactNode;
 }
 
 export default function ShareUrlModal({
@@ -31,11 +37,17 @@ export default function ShareUrlModal({
   setShowShareModal,
   handleShareUrlModeChange,
   copyUrl,
+  className,
+  style,
+  renderModeOption,
+  renderCopyButton,
 }: ShareUrlModalProps) {
+  const copyLabel = copied ? 'Copied!' : `Copy ${shareUrlMode === 'edit' ? 'Edit' : 'Fullscreen'} URL`;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'var(--ui-overlay)' }}
+      className={`fixed inset-0 z-50 flex items-center justify-center ${className ?? ''}`}
+      style={{ backgroundColor: 'var(--ui-overlay)', ...style }}
       onClick={() => setShowShareModal(false)}
     >
       <div
@@ -54,20 +66,29 @@ export default function ShareUrlModal({
         </div>
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {URL_SHARE_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleShareUrlModeChange(option.value)}
-                className={`text-left rounded-lg px-3 py-2 border transition-colors ${
-                  shareUrlMode === option.value
-                    ? 'border-[var(--color-accent)] bg-[var(--ui-item-hover)]'
-                    : 'border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)]'
-                }`}
-              >
-                <p className="text-sm font-semibold">{option.label}</p>
-                <p className="text-[11px] text-white/55">{option.description}</p>
-              </button>
-            ))}
+            {URL_SHARE_OPTIONS.map((option) => {
+              const isActive = shareUrlMode === option.value;
+              const handleClick = () => handleShareUrlModeChange(option.value);
+
+              if (renderModeOption) {
+                return <div key={option.value}>{renderModeOption({ option, isActive, onClick: handleClick })}</div>;
+              }
+
+              return (
+                <button
+                  key={option.value}
+                  onClick={handleClick}
+                  className={`text-left rounded-lg px-3 py-2 border transition-colors ${
+                    isActive
+                      ? 'border-[var(--color-accent)] bg-[var(--ui-item-hover)]'
+                      : 'border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)]'
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{option.label}</p>
+                  <p className="text-[11px] text-white/55">{option.description}</p>
+                </button>
+              );
+            })}
           </div>
           <input
             type="text"
@@ -76,12 +97,14 @@ export default function ShareUrlModal({
             className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-xs font-mono"
           />
           <p className="text-xs text-white/40">{shareUrl.length.toLocaleString()} characters</p>
-          <button
-            onClick={copyUrl}
-            className="w-full py-2 rounded-lg bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] text-sm font-medium"
-          >
-            {copied ? 'Copied!' : `Copy ${shareUrlMode === 'edit' ? 'Edit' : 'Fullscreen'} URL`}
-          </button>
+          {renderCopyButton ? renderCopyButton({ onClick: copyUrl, copied, label: copyLabel }) : (
+            <button
+              onClick={copyUrl}
+              className="w-full py-2 rounded-lg bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] text-sm font-medium"
+            >
+              {copyLabel}
+            </button>
+          )}
         </div>
       </div>
     </div>

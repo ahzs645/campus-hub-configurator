@@ -1,4 +1,5 @@
-import type { ChangeEvent, RefObject } from 'react';
+import type { ChangeEvent, CSSProperties, RefObject } from 'react';
+import type { ReactNode } from 'react';
 import type { DisplayConfig } from '../lib/config';
 
 type JsonTransferMessage = { tone: 'success' | 'error'; text: string };
@@ -15,6 +16,13 @@ export interface ConfigureHeaderProps {
   jsonTransferMessage: JsonTransferMessage | null;
   headerActions?: (config: DisplayConfig) => React.ReactNode;
   setMobileSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  className?: string;
+  style?: CSSProperties;
+  renderTitle?: (props: { schoolName: string; isMobile: boolean }) => ReactNode;
+  renderImportButton?: (props: { onClick: () => void; isMobile: boolean }) => ReactNode;
+  renderExportButton?: (props: { onClick: () => void; isMobile: boolean }) => ReactNode;
+  renderGenerateUrlButton?: (props: { onClick: () => void; theme: DisplayConfig['theme'] }) => ReactNode;
+  renderFullscreenLink?: (props: { href: string; theme: DisplayConfig['theme'] }) => ReactNode;
 }
 
 export default function ConfigureHeader({
@@ -29,9 +37,16 @@ export default function ConfigureHeader({
   jsonTransferMessage,
   headerActions,
   setMobileSidebarOpen,
+  className,
+  style,
+  renderTitle,
+  renderImportButton,
+  renderExportButton,
+  renderGenerateUrlButton,
+  renderFullscreenLink,
 }: ConfigureHeaderProps) {
   return (
-    <header className="flex-shrink-0 border-b border-[color:var(--ui-panel-border)] px-4 md:px-6 py-3 md:py-4">
+    <header className={`flex-shrink-0 border-b border-[color:var(--ui-panel-border)] px-4 md:px-6 py-3 md:py-4 ${className ?? ''}`} style={style}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {isMobile && (
@@ -47,13 +62,15 @@ export default function ConfigureHeader({
               </svg>
             </button>
           )}
-          <h1 className={`font-display font-bold flex items-center gap-2 ${isMobile ? 'text-base' : 'text-2xl gap-3'}`}>
-            <span
-              className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full flex-shrink-0"
-              style={{ backgroundColor: config.theme.accent }}
-            />
-            <span className="truncate">{isMobile ? 'Campus Hub' : 'Campus Hub Configurator'}</span>
-          </h1>
+          {renderTitle ? renderTitle({ schoolName: config.schoolName, isMobile }) : (
+            <h1 className={`font-display font-bold flex items-center gap-2 ${isMobile ? 'text-base' : 'text-2xl gap-3'}`}>
+              <span
+                className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: config.theme.accent }}
+              />
+              <span className="truncate">{isMobile ? 'Campus Hub' : 'Campus Hub Configurator'}</span>
+            </h1>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <div className="flex items-center gap-1.5 md:gap-2">
@@ -64,39 +81,47 @@ export default function ConfigureHeader({
               onChange={importJson}
               className="hidden"
             />
-            <button
-              onClick={openImportDialog}
-              className={`rounded-lg font-medium border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all ${isMobile ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2'}`}
-            >
-              {isMobile ? 'Import' : 'Import JSON'}
-            </button>
-            <button
-              onClick={exportJson}
-              className={`rounded-lg font-medium border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all ${isMobile ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2'}`}
-            >
-              {isMobile ? 'Export' : 'Export JSON'}
-            </button>
+            {renderImportButton ? renderImportButton({ onClick: openImportDialog, isMobile }) : (
+              <button
+                onClick={openImportDialog}
+                className={`rounded-lg font-medium border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all ${isMobile ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2'}`}
+              >
+                {isMobile ? 'Import' : 'Import JSON'}
+              </button>
+            )}
+            {renderExportButton ? renderExportButton({ onClick: exportJson, isMobile }) : (
+              <button
+                onClick={exportJson}
+                className={`rounded-lg font-medium border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all ${isMobile ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2'}`}
+              >
+                {isMobile ? 'Export' : 'Export JSON'}
+              </button>
+            )}
             {headerActions?.(config)}
             {!isMobile && (
               <>
-                <button
-                  onClick={generateUrl}
-                  className="px-4 py-2 rounded-lg font-medium transition-all hover:scale-105"
-                  style={{ backgroundColor: config.theme.accent, color: config.theme.primary }}
-                >
-                  Generate URL
-                </button>
-                <a
-                  href={fullscreenPreviewUrl || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(event) => {
-                    if (!fullscreenPreviewUrl) event.preventDefault();
-                  }}
-                  className="px-4 py-2 rounded-lg font-medium border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all"
-                >
-                  Open Fullscreen
-                </a>
+                {renderGenerateUrlButton ? renderGenerateUrlButton({ onClick: generateUrl, theme: config.theme }) : (
+                  <button
+                    onClick={generateUrl}
+                    className="px-4 py-2 rounded-lg font-medium transition-all hover:scale-105"
+                    style={{ backgroundColor: config.theme.accent, color: config.theme.primary }}
+                  >
+                    Generate URL
+                  </button>
+                )}
+                {renderFullscreenLink ? renderFullscreenLink({ href: fullscreenPreviewUrl || '#', theme: config.theme }) : (
+                  <a
+                    href={fullscreenPreviewUrl || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(event) => {
+                      if (!fullscreenPreviewUrl) event.preventDefault();
+                    }}
+                    className="px-4 py-2 rounded-lg font-medium border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all"
+                  >
+                    Open Fullscreen
+                  </a>
+                )}
               </>
             )}
           </div>
@@ -114,24 +139,28 @@ export default function ConfigureHeader({
       {/* Mobile-only secondary actions */}
       {isMobile && (
         <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-[color:var(--ui-panel-border)]">
-          <button
-            onClick={generateUrl}
-            className="flex-1 px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all"
-            style={{ backgroundColor: config.theme.accent, color: config.theme.primary }}
-          >
-            Generate URL
-          </button>
-          <a
-            href={fullscreenPreviewUrl || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(event) => {
-              if (!fullscreenPreviewUrl) event.preventDefault();
-            }}
-            className="flex-1 px-2.5 py-1.5 rounded-lg font-medium text-xs border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all text-center"
-          >
-            Open Fullscreen
-          </a>
+          {renderGenerateUrlButton ? renderGenerateUrlButton({ onClick: generateUrl, theme: config.theme }) : (
+            <button
+              onClick={generateUrl}
+              className="flex-1 px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all"
+              style={{ backgroundColor: config.theme.accent, color: config.theme.primary }}
+            >
+              Generate URL
+            </button>
+          )}
+          {renderFullscreenLink ? renderFullscreenLink({ href: fullscreenPreviewUrl || '#', theme: config.theme }) : (
+            <a
+              href={fullscreenPreviewUrl || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => {
+                if (!fullscreenPreviewUrl) event.preventDefault();
+              }}
+              className="flex-1 px-2.5 py-1.5 rounded-lg font-medium text-xs border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all text-center"
+            >
+              Open Fullscreen
+            </a>
+          )}
         </div>
       )}
     </header>

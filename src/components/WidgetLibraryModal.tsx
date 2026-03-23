@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import type { DisplayConfig } from '../lib/config';
 import {
   getAllWidgets,
@@ -18,6 +20,10 @@ export interface WidgetLibraryModalProps {
   placementError: string | null;
   setPlacementError: (error: string | null) => void;
   hasTicker: boolean;
+  className?: string;
+  style?: CSSProperties;
+  renderWidgetItem?: (props: { widget: any; count: number; isTicker: boolean; hasTicker: boolean; onAdd: () => void; onToggleTicker: () => void }) => ReactNode;
+  renderSearchInput?: (props: { value: string; onChange: (value: string) => void }) => ReactNode;
 }
 
 export default function WidgetLibraryModal({
@@ -32,13 +38,17 @@ export default function WidgetLibraryModal({
   placementError,
   setPlacementError,
   hasTicker,
+  className,
+  style,
+  renderWidgetItem,
+  renderSearchInput,
 }: WidgetLibraryModalProps) {
   const availableWidgets = getAllWidgets();
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'var(--ui-overlay)' }}
+      className={`fixed inset-0 z-50 flex items-center justify-center ${className ?? ''}`}
+      style={{ backgroundColor: 'var(--ui-overlay)', ...style }}
       onClick={() => { setShowWidgetLibrary(false); setLibSearch(''); setLibTag(null); }}
     >
       <div
@@ -58,23 +68,25 @@ export default function WidgetLibraryModal({
 
         {/* Search & Tag Filters */}
         <div className="px-4 pt-2 pb-2 space-y-1.5 border-b border-[color:var(--ui-panel-border)] flex-shrink-0">
-          <div className="relative">
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search widgets..."
-              value={libSearch}
-              onChange={(e) => setLibSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-[color:var(--ui-item-border)] rounded-lg text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--color-accent)]/50"
-            />
-          </div>
+          {renderSearchInput ? renderSearchInput({ value: libSearch, onChange: setLibSearch }) : (
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search widgets..."
+                value={libSearch}
+                onChange={(e) => setLibSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white/5 border border-[color:var(--ui-item-border)] rounded-lg text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--color-accent)]/50"
+              />
+            </div>
+          )}
           <div className="flex gap-1.5 flex-wrap">
             <button
               onClick={() => setLibTag(null)}
@@ -121,6 +133,23 @@ export default function WidgetLibraryModal({
             const count = config.layout.filter((w) => w.type === widget.type).length;
             const isTicker = widget.type === 'news-ticker';
 
+            const onToggleTicker = () => {
+              if (hasTicker) {
+                setPlacementError(null);
+                setConfig((prev) => ({
+                  ...prev,
+                  tickerEnabled: false,
+                  layout: prev.layout.filter((w) => w.type !== 'news-ticker'),
+                }));
+              } else {
+                addWidget('news-ticker');
+              }
+            };
+
+            if (renderWidgetItem) {
+              return <div key={widget.type}>{renderWidgetItem({ widget, count, isTicker, hasTicker, onAdd: () => addWidget(widget.type), onToggleTicker })}</div>;
+            }
+
             return (
               <div
                 key={widget.type}
@@ -153,18 +182,7 @@ export default function WidgetLibraryModal({
                 </div>
                 {isTicker ? (
                   <button
-                    onClick={() => {
-                      if (hasTicker) {
-                        setPlacementError(null);
-                        setConfig((prev) => ({
-                          ...prev,
-                          tickerEnabled: false,
-                          layout: prev.layout.filter((w) => w.type !== 'news-ticker'),
-                        }));
-                      } else {
-                        addWidget('news-ticker');
-                      }
-                    }}
+                    onClick={onToggleTicker}
                     className={`w-10 h-5 rounded-full transition-all flex-shrink-0 ${
                       hasTicker ? 'bg-[var(--color-accent)]' : 'bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)]'
                     }`}
