@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, lazy, Suspense, type ChangeEvent } from 'react';
+import { useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
 import {
   DEFAULT_CONFIG,
   normalizeConfig,
@@ -11,61 +11,28 @@ import {
   type WidgetConfig,
 } from '../lib/config';
 import {
-  clearDashboardHistory,
   listDashboardHistory,
   saveDashboardHistory,
   serializeDisplayConfig,
   type DashboardHistoryEntry,
 } from '../lib/dashboard-history';
-import { DEMO_PRESETS } from '../lib/presets';
 import {
   getAllWidgets,
   getWidget,
-  getWidgetTags,
-  ALL_TAGS,
-} from '@campus-hub/engine';
-import { AppIcon, WidgetEditDialog } from '@campus-hub/engine';
-import type { GridStackItem } from '@campus-hub/engine';
+} from '@firstform/campus-hub-engine';
+import { WidgetEditDialog } from '@firstform/campus-hub-engine';
+import type { GridStackItem } from '@firstform/campus-hub-engine';
 import EditableWidget from './EditableWidget';
+import ConfigureHeader from './ConfigureHeader';
+import ConfigureSidebar from './ConfigureSidebar';
+import EditorArea from './EditorArea';
+import WidgetLibraryModal from './WidgetLibraryModal';
+import ShareUrlModal from './ShareUrlModal';
 
 type GridStackWrapperRef = { getItems: () => GridStackItem[] };
 
-// Lazy import for GridStack to avoid SSR issues
-const GridStackWrapper = lazy(() => import('@campus-hub/engine').then(m => ({ default: m.GridStackWrapper })));
-
-const ASPECT_RATIOS = [
-  { label: '16:9', value: 16 / 9, desc: 'Standard HD' },
-  { label: '4:3', value: 4 / 3, desc: 'Traditional' },
-  { label: '21:9', value: 21 / 9, desc: 'Ultrawide' },
-  { label: '9:16', value: 9 / 16, desc: 'Portrait' },
-];
-
-const COLOR_PRESETS = [
-  { name: 'Campus Classic', primary: '#035642', accent: '#B79527', background: '#022b21' },
-  { name: 'SparkLab', primary: '#122738', accent: '#f85c14', background: '#0a1620' },
-  { name: 'Crimson', primary: '#1a1a2e', accent: '#e94560', background: '#16213e' },
-  { name: 'Emerald', primary: '#2d3436', accent: '#00b894', background: '#1e272e' },
-  { name: 'Ocean', primary: '#2c3e50', accent: '#3498db', background: '#1a252f' },
-  { name: 'Minimal', primary: '#0f0f0f', accent: '#ffffff', background: '#000000' },
-  { name: 'Sandstone', primary: '#1b4332', accent: '#d4a373', background: '#081c15' },
-  { name: 'Royal', primary: '#1a1040', accent: '#9b59b6', background: '#0d0a20' },
-];
-
 const DEFAULT_GRID_COLS = 12;
 const DEFAULT_GRID_ROWS = 8;
-
-const ROW_OPTIONS = [
-  { label: 'Coarse', value: 8 },
-  { label: 'Medium', value: 12 },
-  { label: 'Fine', value: 16 },
-];
-
-const COL_OPTIONS = [
-  { label: 'Coarse', value: 8 },
-  { label: 'Standard', value: 12 },
-  { label: 'Fine', value: 16 },
-  { label: 'Ultra', value: 24 },
-];
 
 const CONFIG_STORAGE_KEY = 'campus-hub:config';
 
@@ -77,19 +44,6 @@ const EXPORT_SCHEMA_VERSION = 1;
 const MOBILE_ZOOM_MIN = 1;
 const MOBILE_ZOOM_MAX = 3;
 const MOBILE_ZOOM_STEP = 0.25;
-const URL_SHARE_OPTIONS: Array<{ value: ShareUrlMode; label: string; description: string }> = [
-  {
-    value: 'fullscreen',
-    label: 'Fullscreen URL',
-    description: 'Opens /display for playback mode.',
-  },
-  {
-    value: 'edit',
-    label: 'Edit URL',
-    description: 'Opens /configure with this config loaded.',
-  },
-];
-
 const copyText = async (value: string): Promise<boolean> => {
   if (typeof navigator !== 'undefined' && typeof navigator.clipboard?.writeText === 'function') {
     try {
@@ -781,110 +735,19 @@ export default function ConfigurePage({
       } as React.CSSProperties}
     >
       {/* Header */}
-      <header className="flex-shrink-0 border-b border-[color:var(--ui-panel-border)] px-4 md:px-6 py-3 md:py-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            {isMobile && (
-              <button
-                onClick={() => setMobileSidebarOpen((v) => !v)}
-                className="w-9 h-9 flex items-center justify-center rounded-lg border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all flex-shrink-0"
-                aria-label="Toggle sidebar"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                  <line x1="3" y1="18" x2="21" y2="18" />
-                </svg>
-              </button>
-            )}
-            <h1 className={`font-display font-bold flex items-center gap-2 ${isMobile ? 'text-base' : 'text-2xl gap-3'}`}>
-              <span
-                className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: config.theme.accent }}
-              />
-              <span className="truncate">{isMobile ? 'Campus Hub' : 'Campus Hub Configurator'}</span>
-            </h1>
-          </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <div className="flex items-center gap-1.5 md:gap-2">
-              <input
-                ref={importInputRef}
-                type="file"
-                accept="application/json,.json"
-                onChange={importJson}
-                className="hidden"
-              />
-              <button
-                onClick={openImportDialog}
-                className={`rounded-lg font-medium border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all ${isMobile ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2'}`}
-              >
-                {isMobile ? 'Import' : 'Import JSON'}
-              </button>
-              <button
-                onClick={exportJson}
-                className={`rounded-lg font-medium border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all ${isMobile ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2'}`}
-              >
-                {isMobile ? 'Export' : 'Export JSON'}
-              </button>
-              {headerActions?.(config)}
-              {!isMobile && (
-                <>
-                  <button
-                    onClick={generateUrl}
-                    className="px-4 py-2 rounded-lg font-medium transition-all hover:scale-105"
-                    style={{ backgroundColor: config.theme.accent, color: config.theme.primary }}
-                  >
-                    Generate URL
-                  </button>
-                  <a
-                    href={fullscreenPreviewUrl || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(event) => {
-                      if (!fullscreenPreviewUrl) event.preventDefault();
-                    }}
-                    className="px-4 py-2 rounded-lg font-medium border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all"
-                  >
-                    Open Fullscreen
-                  </a>
-                </>
-              )}
-            </div>
-            {jsonTransferMessage && (
-              <p
-                className={`text-xs ${
-                  jsonTransferMessage.tone === 'success' ? 'text-emerald-300' : 'text-red-300'
-                }`}
-              >
-                {jsonTransferMessage.text}
-              </p>
-            )}
-          </div>
-        </div>
-        {/* Mobile-only secondary actions */}
-        {isMobile && (
-          <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-[color:var(--ui-panel-border)]">
-            <button
-              onClick={generateUrl}
-              className="flex-1 px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all"
-              style={{ backgroundColor: config.theme.accent, color: config.theme.primary }}
-            >
-              Generate URL
-            </button>
-            <a
-              href={fullscreenPreviewUrl || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => {
-                if (!fullscreenPreviewUrl) event.preventDefault();
-              }}
-              className="flex-1 px-2.5 py-1.5 rounded-lg font-medium text-xs border border-[color:var(--ui-panel-border)] hover:bg-[var(--ui-item-hover)] transition-all text-center"
-            >
-              Open Fullscreen
-            </a>
-          </div>
-        )}
-      </header>
+      <ConfigureHeader
+        config={config}
+        isMobile={isMobile}
+        importInputRef={importInputRef}
+        importJson={importJson}
+        openImportDialog={openImportDialog}
+        exportJson={exportJson}
+        generateUrl={generateUrl}
+        fullscreenPreviewUrl={fullscreenPreviewUrl}
+        jsonTransferMessage={jsonTransferMessage}
+        headerActions={headerActions}
+        setMobileSidebarOpen={setMobileSidebarOpen}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex min-h-0 overflow-hidden relative">
@@ -896,854 +759,84 @@ export default function ConfigurePage({
           />
         )}
         {/* Sidebar */}
-        <aside className={`${
-          isMobile
-            ? `absolute top-0 left-0 bottom-0 z-40 w-72 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
-            : 'w-80'
-        } flex-shrink-0 border-r border-[color:var(--ui-panel-border)] bg-[var(--ui-panel-soft)] flex flex-col overflow-hidden`}
-        style={isMobile ? { backgroundColor: config.theme.background } : undefined}>
-          {/* Tab Bar */}
-          <div className="flex-shrink-0 p-3 pb-0">
-            <div className="flex gap-1 bg-[var(--ui-panel-bg)] rounded-lg p-1 border border-[color:var(--ui-panel-border)]">
-              {([
-                { key: 'widgets' as const, label: 'Widgets' },
-                { key: 'settings' as const, label: 'Settings' },
-                { key: 'presets' as const, label: 'Presets' },
-              ]).map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setSidebarTab(tab.key)}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    sidebarTab === tab.key
-                      ? 'bg-[var(--ui-item-hover)] text-white'
-                      : 'text-white/50 hover:text-white/80'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-
-            {/* === Widgets Tab === */}
-            {sidebarTab === 'widgets' && (
-              <>
-                <div className="flex items-center justify-between">
-                  <h2 className="font-bold text-lg">
-                    Widgets
-                    {config.layout.length > 0 && (
-                      <span className="ml-2 text-sm font-normal text-white/40">({config.layout.length})</span>
-                    )}
-                  </h2>
-                  {config.layout.length > 0 && (
-                    <button
-                      onClick={() => setConfig((prev) => ({ ...prev, layout: [], tickerEnabled: false }))}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                    >
-                      Clear All
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => setShowWidgetLibrary(true)}
-                  className="w-full py-2.5 rounded-lg font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                  style={{ backgroundColor: config.theme.accent, color: config.theme.background }}
-                >
-                  <span className="text-lg leading-none">+</span>
-                  Add Widget
-                </button>
-
-                {placementError && (
-                  <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                    {placementError}
-                  </div>
-                )}
-
-                {offGridCount > 0 && (
-                  <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-                    {offGridCount} widget{offGridCount > 1 ? 's' : ''} off grid — will not appear in exports or generated URLs. Scroll the preview to find {offGridCount > 1 ? 'them' : 'it'}.
-                  </div>
-                )}
-
-                {config.layout.length === 0 ? (
-                  <div className="text-center py-8 text-white/30">
-                    <div className="text-3xl mb-2">+</div>
-                    <p className="text-sm">No widgets yet</p>
-                    <p className="text-xs mt-1">Click &quot;Add Widget&quot; to get started</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {config.layout.map((widget) => {
-                      const widgetDef = getWidget(widget.type);
-                      if (!widgetDef) return null;
-                      const isOffGrid = offGridIds.has(widget.id);
-                      return (
-                        <div
-                          key={widget.id}
-                          className={`rounded-lg p-3 space-y-2 ${
-                            isOffGrid
-                              ? 'bg-amber-500/10 border border-amber-500/30'
-                              : 'bg-[var(--ui-panel-bg)] border border-[color:var(--ui-panel-border)]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <AppIcon name={widgetDef.icon} className="w-5 h-5 text-white/90" />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm flex items-center gap-2">
-                                {widgetDef.name}
-                                {isOffGrid && (
-                                  <span className="text-[10px] font-medium text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">
-                                    OFF GRID
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-white/40">
-                                {widget.w}×{widget.h} at ({widget.x}, {widget.y})
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {widgetDef.OptionsComponent && (
-                                <button
-                                  onClick={() => setEditingWidget(widget)}
-                                  className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--ui-item-hover)] text-white/50 hover:text-white transition-colors"
-                                  title="Configure"
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="3" />
-                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                                  </svg>
-                                </button>
-                              )}
-                              <button
-                                onClick={() => removeWidget(widget.id)}
-                                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-500/20 text-white/50 hover:text-red-400 transition-colors"
-                                title="Remove"
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* === Settings Tab === */}
-            {sidebarTab === 'settings' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-white/60 mb-1">School Name</label>
-                  <input
-                    type="text"
-                    value={config.schoolName}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, schoolName: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none"
-                  />
-                </div>
-
-                {/* Logo */}
-                <div>
-                  <label className="block text-sm text-white/60 mb-1">Logo</label>
-                  <select
-                    value={config.logo?.type ?? ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (!val) {
-                        setConfig((prev) => {
-                          const { logo: _, ...rest } = prev;
-                          return rest as DisplayConfig;
-                        });
-                      } else {
-                        setConfig((prev) => ({
-                          ...prev,
-                          logo: { type: val as 'svg' | 'url', value: prev.logo?.value ?? '' },
-                        }));
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm mb-2"
-                  >
-                    <option value="">None</option>
-                    <option value="url">Image URL</option>
-                    <option value="svg">Raw SVG</option>
-                  </select>
-                  {config.logo?.type === 'url' && (
-                    <input
-                      type="text"
-                      placeholder="https://example.com/logo.svg"
-                      value={config.logo.value}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          logo: { type: 'url', value: e.target.value },
-                        }))
-                      }
-                      className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm"
-                    />
-                  )}
-                  {config.logo?.type === 'svg' && (
-                    <textarea
-                      placeholder="<svg>...</svg>"
-                      value={config.logo.value}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          logo: { type: 'svg', value: e.target.value },
-                        }))
-                      }
-                      rows={4}
-                      className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm font-mono resize-y"
-                    />
-                  )}
-                  {config.logo?.value && (
-                    <div className="mt-2 p-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] flex items-center justify-center">
-                      {config.logo.type === 'url' ? (
-                        <img src={config.logo.value} alt="Logo preview" className="max-h-12 max-w-full object-contain" />
-                      ) : (
-                        <div className="max-h-12 [&>svg]:max-h-12 [&>svg]:w-auto" dangerouslySetInnerHTML={{ __html: config.logo.value }} />
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Coming Soon Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="block text-sm font-medium text-white/80">Coming Soon</label>
-                    <p className="text-xs text-white/40">Blur entire display with a &quot;Coming Soon&quot; overlay</p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={!!config.comingSoon}
-                    onClick={() => setConfig((prev) => ({ ...prev, comingSoon: !prev.comingSoon || undefined }))}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-                      config.comingSoon ? 'bg-[var(--ui-switch-on)]' : 'bg-[var(--ui-switch-off)]'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        config.comingSoon ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-white/60 mb-2">Color Presets</label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {COLOR_PRESETS.map((preset) => {
-                      const isActive =
-                        config.theme.primary === preset.primary &&
-                        config.theme.accent === preset.accent &&
-                        config.theme.background === preset.background;
-                      return (
-                        <button
-                          key={preset.name}
-                          title={preset.name}
-                          onClick={() =>
-                            setConfig((prev) => ({
-                              ...prev,
-                              theme: {
-                                primary: preset.primary,
-                                accent: preset.accent,
-                                background: preset.background,
-                              },
-                            }))
-                          }
-                          className={`group relative h-8 rounded-lg overflow-hidden transition-all ${
-                            isActive
-                              ? 'ring-2 ring-white ring-offset-1 ring-offset-transparent scale-105'
-                              : 'hover:scale-105'
-                          }`}
-                        >
-                          <div className="absolute inset-0 flex">
-                            <div className="w-1/2" style={{ backgroundColor: preset.primary }} />
-                            <div className="w-1/2" style={{ backgroundColor: preset.accent }} />
-                          </div>
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                            <span className="text-[9px] font-medium text-white truncate px-1">{preset.name}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm text-white/60 mb-1">Primary</label>
-                    <input
-                      type="color"
-                      value={config.theme.primary}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          theme: { ...prev.theme, primary: e.target.value },
-                        }))
-                      }
-                      className="w-full h-10 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-white/60 mb-1">Accent</label>
-                    <input
-                      type="color"
-                      value={config.theme.accent}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          theme: { ...prev.theme, accent: e.target.value },
-                        }))
-                      }
-                      className="w-full h-10 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                {/* CORS Proxy */}
-                <div className="pt-2">
-                  <label className="block text-sm text-white/60 mb-1">CORS Proxy URL</label>
-                  <input
-                    type="text"
-                    value={config.corsProxy ?? ''}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, corsProxy: e.target.value }))}
-                    placeholder="https://your-worker.workers.dev/?url="
-                    className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm font-mono"
-                  />
-                  <p className="text-xs text-white/40 mt-1">
-                    Used by widgets that fetch external data (weather, news, climbing gym). Deploy your own Cloudflare Worker for reliable access.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* === Presets Tab === */}
-            {sidebarTab === 'presets' && (
-              <>
-                <div className="bg-[var(--ui-panel-bg)] rounded-xl p-4 space-y-3 border border-[color:var(--ui-panel-border)]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="font-bold text-lg flex items-center gap-2">
-                        <span className="text-[var(--color-accent)]">Recent Drafts</span>
-                      </h2>
-                      <p className="text-xs text-white/50">Stored in your browser local DB. Keep up to 5 previous dashboard versions.</p>
-                    </div>
-                    {recentDashboards.length > 0 && (
-                      <button
-                        onClick={() => {
-                          setHistoryState('loading');
-                          void clearDashboardHistory()
-                            .then(() => refreshDashboardHistory())
-                            .catch(() => setHistoryState('ready'));
-                        }}
-                        className="text-xs text-white/50 hover:text-white transition-colors"
-                      >
-                        Clear cache
-                      </button>
-                    )}
-                  </div>
-
-                  {historyState === 'loading' ? (
-                    <div className="text-xs text-white/40 rounded-lg border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] px-3 py-2">
-                      Loading local dashboard history...
-                    </div>
-                  ) : recentDashboards.length === 0 ? (
-                    <div className="text-xs text-white/40 rounded-lg border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] px-3 py-3">
-                      No cached drafts yet. Your last 5 dashboard states will appear here as you edit.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {recentDashboards.map((entry, index) => {
-                        const snapshot = entry.config;
-                        const isCurrent = entry.signature === currentConfigSignature;
-                        const widgetCount = snapshot.layout.length;
-                        const timestamp = new Intl.DateTimeFormat(undefined, {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        }).format(entry.savedAt);
-
-                        return (
-                          <button
-                            key={entry.id}
-                            onClick={() => hydrateEditorState(snapshot)}
-                            className="w-full p-3 rounded-lg bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border border-[color:var(--ui-item-border)] hover:border-[var(--ui-item-border-hover)] transition-all text-left"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium truncate">
-                                    {snapshot.schoolName || `Dashboard ${index + 1}`}
-                                  </span>
-                                  {isCurrent && (
-                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--ui-accent-soft)] text-[var(--color-accent)]">
-                                      Current
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-[11px] text-white/45 mt-1">{timestamp}</div>
-                                <div className="text-xs text-white/55 mt-1">
-                                  {widgetCount} widget{widgetCount === 1 ? '' : 's'} · {snapshot.gridCols ?? DEFAULT_GRID_COLS}×{snapshot.gridRows ?? DEFAULT_GRID_ROWS} grid
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                <span
-                                  className="w-3 h-3 rounded-full border border-white/15"
-                                  style={{ backgroundColor: snapshot.theme.primary }}
-                                  title="Primary color"
-                                />
-                                <span
-                                  className="w-3 h-3 rounded-full border border-white/15"
-                                  style={{ backgroundColor: snapshot.theme.accent }}
-                                  title="Accent color"
-                                />
-                                <span
-                                  className="w-3 h-3 rounded-full border border-white/15"
-                                  style={{ backgroundColor: snapshot.theme.background }}
-                                  title="Background color"
-                                />
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-[var(--ui-panel-bg)] rounded-xl p-4 space-y-3 border border-[color:var(--ui-panel-border)]">
-                  <h2 className="font-bold text-lg flex items-center gap-2">
-                    <span className="text-[var(--color-accent)]">Demo Presets</span>
-                  </h2>
-                  <p className="text-xs text-white/50">Load a pre-built layout to get started quickly</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {DEMO_PRESETS.map((preset) => (
-                      <button
-                        key={preset.id}
-                        onClick={() => hydrateEditorState(normalizeConfig(preset.config))}
-                        className="p-2 rounded-lg bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border border-[color:var(--ui-item-border)] hover:border-[var(--ui-item-border-hover)] transition-all text-left group"
-                      >
-                        <div className="mb-1">
-                          <AppIcon name={preset.icon} className="w-5 h-5 text-white/80" />
-                        </div>
-                        <div className="text-xs font-medium group-hover:text-[var(--color-accent)] transition-colors">{preset.name}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-[var(--ui-panel-bg)] border border-[color:var(--ui-panel-border)] rounded-xl p-4 space-y-3">
-                  <h2 className="font-bold text-lg">Preview Aspect Ratio</h2>
-                  <div className="grid grid-cols-2 gap-2">
-                    {ASPECT_RATIOS.map((ar) => (
-                      <button
-                        key={ar.label}
-                        onClick={() => setAspectRatio(ar.value)}
-                        className={`p-2 rounded-lg text-sm transition-all ${
-                          aspectRatio === ar.value
-                            ? 'bg-[var(--ui-item-hover)] border-[var(--ui-item-border-hover)]'
-                            : 'bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border-[color:var(--ui-item-border)]'
-                        } border`}
-                      >
-                        <div className="font-medium">{ar.label}</div>
-                        <div className="text-xs text-white/50">{ar.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-          </div>
-        </aside>
+        <ConfigureSidebar
+          config={config}
+          setConfig={setConfig}
+          isMobile={isMobile}
+          mobileSidebarOpen={mobileSidebarOpen}
+          sidebarTab={sidebarTab}
+          setSidebarTab={setSidebarTab}
+          setShowWidgetLibrary={setShowWidgetLibrary}
+          setEditingWidget={setEditingWidget}
+          removeWidget={removeWidget}
+          placementError={placementError}
+          offGridIds={offGridIds}
+          offGridCount={offGridCount}
+          recentDashboards={recentDashboards}
+          historyState={historyState}
+          setHistoryState={setHistoryState}
+          refreshDashboardHistory={refreshDashboardHistory}
+          hydrateEditorState={hydrateEditorState}
+          currentConfigSignature={currentConfigSignature}
+          aspectRatio={aspectRatio}
+          setAspectRatio={setAspectRatio}
+        />
 
         {/* Editor Area */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Editor Header */}
-          <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 gap-4 border-b border-[color:var(--ui-panel-border)]">
-            <h2 className="font-display font-bold text-sm" style={{ color: config.theme.accent }}>
-              {isMobile ? 'Preview' : 'Layout Editor'}
-            </h2>
-            {!isMobile && (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-xs text-white/60">
-                  <span className="text-white/40">Grid</span>
-                  <select
-                    id="grid-cols"
-                    value={gridCols}
-                    onChange={(e) => {
-                      const nextCols = Number(e.target.value);
-                      const prevCols = gridCols;
-                      setGridCols(nextCols);
-                      setConfig((prev) => ({
-                        ...prev,
-                        gridCols: nextCols,
-                        layout: remapLayout(prev.layout, 'x', prevCols, nextCols),
-                      }));
-                    }}
-                    className="px-2 py-1 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-white/80 text-xs outline-none focus:border-[var(--ui-item-border-hover)]"
-                    title="Columns"
-                  >
-                    {COL_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.value}c
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-white/30">x</span>
-                  <select
-                    id="grid-rows"
-                    value={gridRows}
-                    onChange={(e) => {
-                      const nextRows = Number(e.target.value);
-                      const prevRows = gridRows;
-                      setGridRows(nextRows);
-                      setConfig((prev) => ({
-                        ...prev,
-                        gridRows: nextRows,
-                        layout: remapLayout(prev.layout, 'y', prevRows, nextRows),
-                      }));
-                    }}
-                    className="px-2 py-1 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-white/80 text-xs outline-none focus:border-[var(--ui-item-border-hover)]"
-                    title="Rows"
-                  >
-                    {ROW_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.value}r
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <span className="text-xs text-white/40">
-                  Drag to reposition. Handles to resize.
-                </span>
-              </div>
-            )}
-            {isMobile && (
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-wide text-white/40">
-                  Zoom
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setMobileZoom((prev) => Math.max(MOBILE_ZOOM_MIN, prev - MOBILE_ZOOM_STEP))}
-                  disabled={clampedMobileZoom <= MOBILE_ZOOM_MIN}
-                  className={`w-7 h-7 rounded-md border border-[color:var(--ui-panel-border)] text-sm transition-colors ${
-                    clampedMobileZoom <= MOBILE_ZOOM_MIN
-                      ? 'opacity-40 cursor-not-allowed'
-                      : 'hover:bg-[var(--ui-item-hover)]'
-                  }`}
-                  aria-label="Zoom out preview"
-                  title="Zoom out"
-                >
-                  -
-                </button>
-                <span className="text-xs text-white/60 tabular-nums min-w-[42px] text-center">
-                  {Math.round(clampedMobileZoom * 100)}%
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setMobileZoom((prev) => Math.min(MOBILE_ZOOM_MAX, prev + MOBILE_ZOOM_STEP))}
-                  disabled={clampedMobileZoom >= MOBILE_ZOOM_MAX}
-                  className={`w-7 h-7 rounded-md border border-[color:var(--ui-panel-border)] text-sm transition-colors ${
-                    clampedMobileZoom >= MOBILE_ZOOM_MAX
-                      ? 'opacity-40 cursor-not-allowed'
-                      : 'hover:bg-[var(--ui-item-hover)]'
-                  }`}
-                  aria-label="Zoom in preview"
-                  title="Zoom in"
-                >
-                  +
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Full-bleed Grid Area */}
-          <div
-            ref={containerRef}
-            className={`flex-1 min-h-0 relative scrollbar-hide ${
-              isMobile ? 'overflow-auto mobile-preview' : 'overflow-x-hidden overflow-y-auto'
-            }`}
-            style={{
-              backgroundColor: config.theme.background,
-              touchAction: isMobile ? 'pan-x pan-y' : 'auto',
-              WebkitOverflowScrolling: 'touch',
-            }}
-          >
-            {/* GridStack container — centered horizontally, top-aligned */}
-            <div className="mx-auto relative" style={{ width: effectivePreviewWidth || '100%' }}>
-              {/* Export boundary indicator */}
-              {effectivePreviewWidth > 0 && effectivePreviewHeight > 0 && (
-                <div
-                  className="absolute inset-x-0 top-0 border-2 border-dashed pointer-events-none z-10 rounded-sm"
-                  style={{
-                    height: effectivePreviewHeight,
-                    borderColor: offGridCount > 0 ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.08)',
-                  }}
-                >
-                  {offGridCount > 0 && (
-                    <span className="absolute right-1.5 bottom-1.5 text-[10px] text-amber-400/70 whitespace-nowrap bg-black/30 px-1.5 py-0.5 rounded">
-                      display boundary
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {effectivePreviewWidth > 0 && effectivePreviewHeight > 0 && (
-                <div className={isMobile ? 'pointer-events-none' : ''}>
-                  <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-white/30">Loading editor...</div>}>
-                  <GridStackWrapper
-                    ref={gridRef}
-                    items={gridItems}
-                    columns={gridCols}
-                    rows={gridRows}
-                    cellHeight={cellHeight}
-                    margin={gridMargin}
-                    contentScale={contentScale}
-                    onLayoutChange={handleLayoutChange}
-                    renderItem={renderGridItem}
-                  />
-                  </Suspense>
-                </div>
-              )}
-
-              {config.layout.length === 0 && effectivePreviewHeight > 0 && (
-                <div
-                  className="absolute inset-x-0 top-0 flex items-center justify-center text-white/30 pointer-events-none"
-                  style={{ height: effectivePreviewHeight }}
-                >
-                  <div className="text-center">
-                    <p className={`mb-2 ${isMobile ? 'text-sm' : 'text-lg'}`}>No widgets added</p>
-                    <p className="text-xs md:text-sm">{isMobile ? 'Open the sidebar to add widgets' : 'Click widgets in the sidebar to add them'}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </main>
+        <EditorArea
+          config={config}
+          setConfig={setConfig}
+          isMobile={isMobile}
+          gridCols={gridCols}
+          gridRows={gridRows}
+          setGridCols={setGridCols}
+          setGridRows={setGridRows}
+          containerRef={containerRef}
+          gridRef={gridRef}
+          gridItems={gridItems}
+          effectivePreviewWidth={effectivePreviewWidth}
+          effectivePreviewHeight={effectivePreviewHeight}
+          cellHeight={cellHeight}
+          gridMargin={gridMargin}
+          contentScale={contentScale}
+          clampedMobileZoom={clampedMobileZoom}
+          mobileZoom={mobileZoom}
+          setMobileZoom={setMobileZoom}
+          handleLayoutChange={handleLayoutChange}
+          renderGridItem={renderGridItem}
+          remapLayout={remapLayout}
+          offGridCount={offGridCount}
+        />
       </div>
 
       {/* Widget Library Modal */}
       {showWidgetLibrary && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: 'var(--ui-overlay)' }}
-          onClick={() => { setShowWidgetLibrary(false); setLibSearch(''); setLibTag(null); }}
-        >
-          <div
-            className="bg-[var(--ui-panel-bg)] border border-[color:var(--ui-panel-border)] rounded-xl w-full max-w-2xl mx-4 backdrop-blur-xl flex flex-col"
-            style={{ backgroundColor: config.theme.background, maxHeight: '55vh' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-[color:var(--ui-panel-border)] flex-shrink-0">
-              <h2 className="font-bold text-lg">Widget Library</h2>
-              <button
-                onClick={() => { setShowWidgetLibrary(false); setLibSearch(''); setLibTag(null); }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--ui-item-hover)] text-white/60 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Search & Tag Filters */}
-            <div className="px-4 pt-2 pb-2 space-y-1.5 border-b border-[color:var(--ui-panel-border)] flex-shrink-0">
-              <div className="relative">
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search widgets..."
-                  value={libSearch}
-                  onChange={(e) => setLibSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-white/5 border border-[color:var(--ui-item-border)] rounded-lg text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--color-accent)]/50"
-                />
-              </div>
-              <div className="flex gap-1.5 flex-wrap">
-                <button
-                  onClick={() => setLibTag(null)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
-                    !libTag
-                      ? 'bg-[var(--color-accent)] text-[var(--color-bg)]'
-                      : 'text-white/50 hover:text-white/70 hover:bg-white/5'
-                  }`}
-                >
-                  All
-                </button>
-                {ALL_TAGS.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => setLibTag(libTag === tag ? null : tag)}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
-                      libTag === tag
-                        ? 'bg-[var(--color-accent)] text-[var(--color-bg)]'
-                        : 'text-white/50 hover:text-white/70 hover:bg-white/5'
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-4 overflow-y-auto space-y-2 min-h-0">
-              {placementError && (
-                <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-2">
-                  {placementError}
-                </div>
-              )}
-              {availableWidgets.filter((w) => {
-                const matchesSearch =
-                  !libSearch ||
-                  w.name.toLowerCase().includes(libSearch.toLowerCase()) ||
-                  w.description.toLowerCase().includes(libSearch.toLowerCase()) ||
-                  w.type.toLowerCase().includes(libSearch.toLowerCase());
-                const matchesTag =
-                  !libTag || getWidgetTags(w.type).includes(libTag);
-                return matchesSearch && matchesTag;
-              }).map((widget) => {
-                const count = config.layout.filter((w) => w.type === widget.type).length;
-                const isTicker = widget.type === 'news-ticker';
-
-                return (
-                  <div
-                    key={widget.type}
-                    className={`p-3 rounded-lg flex items-center gap-3 border transition-all ${
-                      count > 0
-                        ? 'bg-[var(--ui-accent-soft)] border-[var(--ui-accent-strong)]'
-                        : 'bg-[var(--ui-item-bg)] border-[color:var(--ui-item-border)]'
-                    }`}
-                  >
-                    <AppIcon name={widget.icon} className="w-6 h-6 text-white/90" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{widget.name}</span>
-                        <div className="flex gap-1">
-                          {getWidgetTags(widget.type).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-white/[0.06] text-white/35"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="text-xs text-white/50">{widget.description}</div>
-                      <div className="text-xs text-white/30 mt-0.5">
-                        Min {widget.minW}×{widget.minH} · Default {widget.defaultW}×{widget.defaultH}
-                        {count > 0 && <span className="ml-2 text-[var(--color-accent)]">· {count} placed</span>}
-                      </div>
-                    </div>
-                    {isTicker ? (
-                      <button
-                        onClick={() => {
-                          if (hasTicker) {
-                            setPlacementError(null);
-                            setConfig((prev) => ({
-                              ...prev,
-                              tickerEnabled: false,
-                              layout: prev.layout.filter((w) => w.type !== 'news-ticker'),
-                            }));
-                          } else {
-                            addWidget('news-ticker');
-                          }
-                        }}
-                        className={`w-10 h-5 rounded-full transition-all flex-shrink-0 ${
-                          hasTicker ? 'bg-[var(--color-accent)]' : 'bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)]'
-                        }`}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                            hasTicker ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => addWidget(widget.type)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border border-[color:var(--ui-item-border)] hover:border-[var(--ui-item-border-hover)] transition-all flex-shrink-0"
-                      >
-                        + Add
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <WidgetLibraryModal
+          config={config}
+          setConfig={setConfig}
+          libSearch={libSearch}
+          setLibSearch={setLibSearch}
+          libTag={libTag}
+          setLibTag={setLibTag}
+          setShowWidgetLibrary={setShowWidgetLibrary}
+          addWidget={addWidget}
+          placementError={placementError}
+          setPlacementError={setPlacementError}
+          hasTicker={hasTicker}
+        />
       )}
 
       {/* Share URL Modal */}
       {showShareModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: 'var(--ui-overlay)' }}
-          onClick={() => setShowShareModal(false)}
-        >
-          <div
-            className="bg-[var(--ui-panel-bg)] border border-[color:var(--ui-panel-border)] rounded-xl p-4 space-y-3 w-full max-w-lg mx-4 backdrop-blur-xl"
-            style={{ backgroundColor: config.theme.background }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold text-lg">Share URL</h2>
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--ui-item-hover)] text-white/60 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {URL_SHARE_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => handleShareUrlModeChange(option.value)}
-                    className={`text-left rounded-lg px-3 py-2 border transition-colors ${
-                      shareUrlMode === option.value
-                        ? 'border-[var(--color-accent)] bg-[var(--ui-item-hover)]'
-                        : 'border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)]'
-                    }`}
-                  >
-                    <p className="text-sm font-semibold">{option.label}</p>
-                    <p className="text-[11px] text-white/55">{option.description}</p>
-                  </button>
-                ))}
-              </div>
-              <input
-                type="text"
-                value={shareUrl}
-                readOnly
-                className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-xs font-mono"
-              />
-              <p className="text-xs text-white/40">{shareUrl.length.toLocaleString()} characters</p>
-              <button
-                onClick={copyUrl}
-                className="w-full py-2 rounded-lg bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] text-sm font-medium"
-              >
-                {copied ? 'Copied!' : `Copy ${shareUrlMode === 'edit' ? 'Edit' : 'Fullscreen'} URL`}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ShareUrlModal
+          config={config}
+          shareUrl={shareUrl}
+          shareUrlMode={shareUrlMode}
+          copied={copied}
+          setShowShareModal={setShowShareModal}
+          handleShareUrlModeChange={handleShareUrlModeChange}
+          copyUrl={copyUrl}
+        />
       )}
 
       {/* Widget Edit Dialog */}

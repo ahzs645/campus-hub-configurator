@@ -1,6 +1,6 @@
 {
   "name": "@firstform/campus-hub-configurator",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Drag-and-drop configurator for Campus Hub displays",
   "type": "module",
   "main": "./src/index.ts",
@@ -21,7 +21,7 @@
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0",
-    "@campus-hub/engine": "^0.1.0",
+    "@firstform/campus-hub-engine": "^0.1.0",
     "@firstform/json-url": "^4.1.0",
     "gridstack": "^12.0.0",
     "lucide-react": ">=0.400.0"
