@@ -232,7 +232,7 @@ export async function generateSharePath(
   const exported = filterInBoundsLayout(config);
   const encoded = await encodeConfig(exported);
   const basePath = getBasePath();
-  const path = mode === 'edit' ? '/configure' : '/display';
+  const path = mode === 'edit' ? '/configure' : '/preview';
   return `${basePath}${path}?config=${encoded}`;
 }
 
