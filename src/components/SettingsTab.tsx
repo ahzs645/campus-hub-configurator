@@ -206,22 +206,6 @@ export default function SettingsTab({ config, setConfig, className, style, rende
         </div>
       </div>
 
-      {/* CORS Proxy */}
-      <div className="pt-2">
-        <label className="block text-sm text-white/60 mb-1">CORS Proxy URL</label>
-        {renderInput ? renderInput({ label: 'CORS Proxy URL', value: config.corsProxy ?? '', onChange: (v) => setConfig((prev) => ({ ...prev, corsProxy: v })), type: 'text', placeholder: 'https://your-worker.workers.dev/?url=' }) : (
-          <input
-            type="text"
-            value={config.corsProxy ?? ''}
-            onChange={(e) => setConfig((prev) => ({ ...prev, corsProxy: e.target.value }))}
-            placeholder="https://your-worker.workers.dev/?url="
-            className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm font-mono"
-          />
-        )}
-        <p className="text-xs text-white/40 mt-1">
-          Used by widgets that fetch external data (weather, news, climbing gym). Deploy your own Cloudflare Worker for reliable access.
-        </p>
-      </div>
     </div>
   );
 }

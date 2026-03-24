@@ -675,7 +675,6 @@ export default function ConfigurePage({
         <EditableWidget
           widget={widget}
           theme={config.theme}
-          corsProxy={config.corsProxy}
           onEdit={handleEditWidget}
           onDelete={removeWidget}
         />
