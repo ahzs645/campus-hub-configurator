@@ -48,6 +48,7 @@ export interface DisplayConfig {
   gridCols?: number;
   logo?: LogoConfig;
   aspectRatio?: number;
+  corsProxy?: string;
 }
 
 export type ShareUrlMode = 'fullscreen' | 'edit';
@@ -144,6 +145,10 @@ export function normalizeConfig(raw: Partial<DisplayConfig> | null | undefined):
     aspectRatio:
       typeof safe.aspectRatio === 'number' && Number.isFinite(safe.aspectRatio) && safe.aspectRatio > 0
         ? safe.aspectRatio
+        : undefined,
+    corsProxy:
+      typeof safe.corsProxy === 'string' && safe.corsProxy.trim().length > 0
+        ? safe.corsProxy
         : undefined,
   };
 }

@@ -129,6 +129,21 @@ export default function SettingsTab({ config, setConfig, className, style, rende
         )}
       </div>
 
+      {/* CORS Proxy */}
+      <div>
+        <label className="block text-sm text-white/60 mb-1">CORS Proxy</label>
+        <p className="text-xs text-white/40 mb-1">Base URL for proxying cross-origin widget requests</p>
+        {renderInput ? renderInput({ label: 'CORS Proxy', value: config.corsProxy ?? '', onChange: (v) => setConfig((prev) => ({ ...prev, corsProxy: v || undefined })), type: 'text', placeholder: 'https://cors.example.workers.dev/' }) : (
+          <input
+            type="text"
+            placeholder="https://cors.example.workers.dev/"
+            value={config.corsProxy ?? ''}
+            onChange={(e) => setConfig((prev) => ({ ...prev, corsProxy: e.target.value || undefined }))}
+            className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm"
+          />
+        )}
+      </div>
+
       <div>
         <label className="block text-sm text-white/60 mb-2">Color Presets</label>
         <div className="grid grid-cols-4 gap-1.5">
