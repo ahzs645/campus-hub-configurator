@@ -20,7 +20,7 @@ import {
   getAllWidgets,
   getWidget,
 } from '@firstform/campus-hub-engine';
-import { WidgetEditDialog } from '@firstform/campus-hub-engine';
+import { WidgetEditDialog, EngineThemeProvider } from '@firstform/campus-hub-engine';
 import type { GridStackItem } from '@firstform/campus-hub-engine';
 import EditableWidget from './EditableWidget';
 import ConfigureHeader from './ConfigureHeader';
@@ -704,6 +704,7 @@ export default function ConfigurePage({
   const contentScale = effectivePreviewHeight > 0 ? effectivePreviewHeight / REF_HEIGHT : 1;
 
   return (
+    <EngineThemeProvider theme={config.theme}>
     <div
       className="h-screen flex flex-col text-white overflow-hidden"
       style={{
@@ -851,5 +852,6 @@ export default function ConfigurePage({
         />
       )}
     </div>
+    </EngineThemeProvider>
   );
 }
