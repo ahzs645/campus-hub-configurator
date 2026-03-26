@@ -111,12 +111,20 @@ export default function EditableWidget({ widget, theme, onEdit, onDelete }: Edit
   const menu = showMenu && typeof document !== 'undefined' && createPortal(
     <div
       ref={menuRef}
-      className="widget-edit-dialog fixed z-[9999] rounded-xl shadow-2xl p-2 min-w-[180px] bg-[var(--ui-panel-soft)] border border-[color:var(--ui-panel-border)] text-[var(--ui-text)]"
-      style={{ top: menuPosition.top, left: menuPosition.left }}
+      className="widget-edit-dialog fixed z-[9999] rounded-xl shadow-2xl p-2 min-w-[180px] border backdrop-blur-xl"
+      style={{
+        top: menuPosition.top,
+        left: menuPosition.left,
+        backgroundColor: `${theme.primary}e6`,
+        borderColor: `${theme.accent}55`,
+        color: '#ffffff',
+        '--ui-item-hover': `${theme.primary}26`,
+        '--ui-item-border': 'rgba(255, 255, 255, 0.15)',
+      } as React.CSSProperties}
     >
       {/* Widget Name */}
-      <div className="px-3 py-2 border-b border-[color:var(--ui-item-border)] mb-2">
-        <span className="text-sm font-medium text-[var(--ui-text)] flex items-center gap-2">
+      <div className="px-3 py-2 border-b mb-2" style={{ borderColor: 'var(--ui-item-border)' }}>
+        <span className="text-sm font-medium flex items-center gap-2" style={{ color: theme.accent }}>
           {widgetDef && <AppIcon name={widgetDef.icon} className="w-4 h-4" />}
           {widgetDef?.name}
         </span>
@@ -129,7 +137,7 @@ export default function EditableWidget({ widget, theme, onEdit, onDelete }: Edit
           onEdit(widget.id);
           setShowMenu(false);
         }}
-        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--ui-text)] hover:bg-[var(--ui-item-hover)] rounded-lg transition-colors"
+        className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-[var(--ui-item-hover)] rounded-lg transition-colors"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -161,7 +169,8 @@ export default function EditableWidget({ widget, theme, onEdit, onDelete }: Edit
               e.stopPropagation();
               setShowDeleteConfirm(false);
             }}
-            className="flex-1 py-2 bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] text-[var(--ui-text)] text-sm font-medium rounded-lg transition-colors"
+            className="flex-1 py-2 hover:bg-[var(--ui-item-hover)] text-sm font-medium rounded-lg transition-colors"
+            style={{ backgroundColor: `${theme.primary}1a` }}
           >
             Cancel
           </button>
