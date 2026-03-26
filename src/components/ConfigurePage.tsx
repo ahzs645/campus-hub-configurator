@@ -849,7 +849,6 @@ export default function ConfigurePage({
           comingSoon={editingWidget.comingSoon}
           onSave={handleSaveWidgetOptions}
           onClose={() => setEditingWidget(null)}
-          accentColor={config.theme.accent}
         />
       )}
     </div>
