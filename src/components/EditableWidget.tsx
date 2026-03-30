@@ -212,7 +212,7 @@ export default function EditableWidget({ widget, theme, onEdit, onDelete }: Edit
       <button
         ref={buttonRef}
         onClick={handleMenuClick}
-        className={`absolute top-3 right-3 z-30 p-2.5 rounded-xl transition-all ${
+        className={`widget-preview-control absolute top-3 right-3 z-30 p-2.5 rounded-xl transition-all ${
           showMenu
             ? 'bg-white text-gray-900'
             : 'bg-black/70 text-white opacity-0 group-hover:opacity-100 hover:bg-black/90'

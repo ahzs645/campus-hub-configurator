@@ -203,11 +203,18 @@ export default function EditorArea({
         }}
       >
         {/* GridStack container — centered horizontally, top-aligned */}
-        <div className="mx-auto relative" style={{ width: effectivePreviewWidth || '100%' }}>
+        <div
+          className="mx-auto relative"
+          data-template-preview-capture="true"
+          style={{
+            width: effectivePreviewWidth || '100%',
+            minHeight: effectivePreviewHeight || undefined,
+          }}
+        >
           {/* Export boundary indicator */}
           {effectivePreviewWidth > 0 && effectivePreviewHeight > 0 && (
             <div
-              className="absolute inset-x-0 top-0 border-2 border-dashed pointer-events-none z-10 rounded-sm"
+              className="preview-boundary-indicator absolute inset-x-0 top-0 border-2 border-dashed pointer-events-none z-10 rounded-sm"
               style={{
                 height: effectivePreviewHeight,
                 borderColor: offGridCount > 0 ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.08)',
