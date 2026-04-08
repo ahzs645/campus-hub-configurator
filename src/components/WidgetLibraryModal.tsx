@@ -19,7 +19,7 @@ export interface WidgetLibraryModalProps {
   addWidget: (type: string) => void;
   placementError: string | null;
   setPlacementError: (error: string | null) => void;
-  hasTicker: boolean;
+  hasTicker?: boolean;
   className?: string;
   style?: CSSProperties;
   renderWidgetItem?: (props: { widget: any; count: number; isTicker: boolean; hasTicker: boolean; onAdd: () => void; onToggleTicker: () => void }) => ReactNode;
