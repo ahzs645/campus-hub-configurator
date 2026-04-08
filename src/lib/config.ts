@@ -7,7 +7,10 @@ export interface WidgetConfig {
     | 'poster-carousel'
     | 'events-list'
     | 'news-ticker'
+    | 'stock-quotes'
     | 'weather'
+    | 'team-schedule'
+    | 'horoscope'
     | 'youtube'
     | 'web'
     | 'image'
@@ -115,6 +118,7 @@ export function normalizeConfig(raw: Partial<DisplayConfig> | null | undefined):
         comingSoon: item.comingSoon === true ? true : undefined,
       }))
     : DEFAULT_CONFIG.layout;
+  const tickerEnabled = layout.some((item) => item.type === 'news-ticker');
 
   return {
     layout,
@@ -123,8 +127,7 @@ export function normalizeConfig(raw: Partial<DisplayConfig> | null | undefined):
       typeof safe.schoolName === 'string' && safe.schoolName.trim().length > 0
         ? safe.schoolName
         : DEFAULT_CONFIG.schoolName,
-    tickerEnabled:
-      typeof safe.tickerEnabled === 'boolean' ? safe.tickerEnabled : DEFAULT_CONFIG.tickerEnabled,
+    tickerEnabled,
     comingSoon: safe.comingSoon === true ? true : undefined,
     gridRows:
       typeof safe.gridRows === 'number' && Number.isFinite(safe.gridRows)

@@ -172,12 +172,14 @@ export default function ConfigurePage({
   headerActions,
   enableBrowserPersistence = true,
 }: ConfigurePageProps = {}) {
-  const [config, setConfigRaw] = useState<DisplayConfig>(initialConfig ?? DEFAULT_CONFIG);
+  const [config, setConfigRaw] = useState<DisplayConfig>(
+    normalizeConfig(initialConfig ?? DEFAULT_CONFIG),
+  );
 
   const setConfig: typeof setConfigRaw = useCallback((updater) => {
     setConfigRaw((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      return next;
+      return normalizeConfig(next);
     });
   }, []);
   const [hasLoadedInitialConfig, setHasLoadedInitialConfig] = useState(false);
@@ -239,8 +241,6 @@ export default function ConfigurePage({
   }, []);
 
   const availableWidgets = getAllWidgets();
-  const hasTicker = config.layout.some((widget) => widget.type === 'news-ticker');
-
   // Notify parent of config changes
   useEffect(() => {
     onChange?.(config);
@@ -465,7 +465,6 @@ export default function ConfigurePage({
 
       return {
         ...prev,
-        tickerEnabled: type === 'news-ticker' ? true : prev.tickerEnabled,
         layout: [...prev.layout, newWidget],
       };
     });
@@ -477,7 +476,6 @@ export default function ConfigurePage({
       const nextLayout = prev.layout.filter((w) => w.id !== id);
       return {
         ...prev,
-        tickerEnabled: nextLayout.some((widget) => widget.type === 'news-ticker'),
         layout: nextLayout,
       };
     });
@@ -822,7 +820,6 @@ export default function ConfigurePage({
           addWidget={addWidget}
           placementError={placementError}
           setPlacementError={setPlacementError}
-          hasTicker={hasTicker}
         />
       )}
 

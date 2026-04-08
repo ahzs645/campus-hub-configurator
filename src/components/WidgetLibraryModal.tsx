@@ -28,7 +28,6 @@ export interface WidgetLibraryModalProps {
 
 export default function WidgetLibraryModal({
   config,
-  setConfig,
   libSearch,
   setLibSearch,
   libTag,
@@ -36,8 +35,6 @@ export default function WidgetLibraryModal({
   setShowWidgetLibrary,
   addWidget,
   placementError,
-  setPlacementError,
-  hasTicker,
   className,
   style,
   renderWidgetItem,
@@ -132,19 +129,9 @@ export default function WidgetLibraryModal({
           }).map((widget) => {
             const count = config.layout.filter((w) => w.type === widget.type).length;
             const isTicker = widget.type === 'news-ticker';
+            const hasTicker = config.layout.some((w) => w.type === 'news-ticker');
 
-            const onToggleTicker = () => {
-              if (hasTicker) {
-                setPlacementError(null);
-                setConfig((prev) => ({
-                  ...prev,
-                  tickerEnabled: false,
-                  layout: prev.layout.filter((w) => w.type !== 'news-ticker'),
-                }));
-              } else {
-                addWidget('news-ticker');
-              }
-            };
+            const onToggleTicker = () => addWidget(widget.type);
 
             if (renderWidgetItem) {
               return <div key={widget.type}>{renderWidgetItem({ widget, count, isTicker, hasTicker, onAdd: () => addWidget(widget.type), onToggleTicker })}</div>;
@@ -180,27 +167,12 @@ export default function WidgetLibraryModal({
                     {count > 0 && <span className="ml-2 text-[var(--color-accent)]">· {count} placed</span>}
                   </div>
                 </div>
-                {isTicker ? (
-                  <button
-                    onClick={onToggleTicker}
-                    className={`w-10 h-5 rounded-full transition-all flex-shrink-0 ${
-                      hasTicker ? 'bg-[var(--color-accent)]' : 'bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)]'
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                        hasTicker ? 'translate-x-5' : 'translate-x-0.5'
-                      }`}
-                    />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => addWidget(widget.type)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border border-[color:var(--ui-item-border)] hover:border-[var(--ui-item-border-hover)] transition-all flex-shrink-0"
-                  >
-                    + Add
-                  </button>
-                )}
+                <button
+                  onClick={() => addWidget(widget.type)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--ui-item-bg)] hover:bg-[var(--ui-item-hover)] border border-[color:var(--ui-item-border)] hover:border-[var(--ui-item-border-hover)] transition-all flex-shrink-0"
+                >
+                  + Add
+                </button>
               </div>
             );
           })}

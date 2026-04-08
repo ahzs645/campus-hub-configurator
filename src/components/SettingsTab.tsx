@@ -4,6 +4,7 @@ import type { DisplayConfig } from '../lib/config';
 
 const COLOR_PRESETS = [
   { name: 'Campus Classic', primary: '#035642', accent: '#B79527', background: '#022b21' },
+  { name: 'Digital Signage', primary: '#8C1D40', accent: '#FFC627', background: '#2A0F1F' },
   { name: 'SparkLab', primary: '#122738', accent: '#f85c14', background: '#0a1620' },
   { name: 'Crimson', primary: '#1a1a2e', accent: '#e94560', background: '#16213e' },
   { name: 'Emerald', primary: '#2d3436', accent: '#00b894', background: '#1e272e' },

@@ -239,6 +239,7 @@ export default function EditorArea({
                 cellHeight={cellHeight}
                 margin={gridMargin}
                 contentScale={contentScale}
+                swapMode="swapy"
                 onLayoutChange={handleLayoutChange}
                 renderItem={renderGridItem}
               />
