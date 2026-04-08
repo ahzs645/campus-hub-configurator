@@ -19,6 +19,8 @@ export interface ConfigureSidebarProps {
   placementError: string | null;
   offGridIds: Set<string>;
   offGridCount: number;
+  layoutIssueIds: Set<string>;
+  layoutIssueCount: number;
   recentDashboards: DashboardHistoryEntry[];
   historyState: 'loading' | 'ready';
   setHistoryState: (state: 'loading' | 'ready') => void;
@@ -45,6 +47,8 @@ export default function ConfigureSidebar({
   placementError,
   offGridIds,
   offGridCount,
+  layoutIssueIds,
+  layoutIssueCount,
   recentDashboards,
   historyState,
   setHistoryState,
@@ -110,6 +114,8 @@ export default function ConfigureSidebar({
             placementError={placementError}
             offGridIds={offGridIds}
             offGridCount={offGridCount}
+            layoutIssueIds={layoutIssueIds}
+            layoutIssueCount={layoutIssueCount}
           />
         )}
 

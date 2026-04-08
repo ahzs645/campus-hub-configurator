@@ -2,28 +2,7 @@
 
 export interface WidgetConfig {
   id: string;
-  type:
-    | 'clock'
-    | 'poster-carousel'
-    | 'events-list'
-    | 'news-ticker'
-    | 'stock-quotes'
-    | 'weather'
-    | 'team-schedule'
-    | 'horoscope'
-    | 'youtube'
-    | 'web'
-    | 'image'
-    | 'media-player'
-    | 'slideshow'
-    | 'poster-feed'
-    | 'widget-stack'
-    | 'bus-connection'
-    | 'climbing-gym'
-    | 'group-fitness'
-    | 'qrcode'
-    | 'library-availability'
-    | 'confessions';
+  type: string;
   x: number;
   y: number;
   w: number;
@@ -106,7 +85,7 @@ export function normalizeConfig(raw: Partial<DisplayConfig> | null | undefined):
   const layout = Array.isArray(safe.layout)
     ? safe.layout.map((item, index) => ({
         id: typeof item.id === 'string' ? item.id : `${item.type ?? 'widget'}-${index}`,
-        type: (typeof item.type === 'string' ? item.type : 'clock') as WidgetConfig['type'],
+        type: typeof item.type === 'string' ? item.type : 'clock',
         x: Number.isFinite(item.x) ? item.x : 0,
         y: Number.isFinite(item.y) ? item.y : 0,
         w: Number.isFinite(item.w) ? item.w : 1,

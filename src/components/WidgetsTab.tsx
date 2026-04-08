@@ -12,9 +12,11 @@ export interface WidgetsTabProps {
   placementError: string | null;
   offGridIds: Set<string>;
   offGridCount: number;
+  layoutIssueIds: Set<string>;
+  layoutIssueCount: number;
   className?: string;
   style?: CSSProperties;
-  renderWidgetItem?: (props: { widget: WidgetConfig; widgetDef: any; isOffGrid: boolean; onEdit: () => void; onRemove: () => void }) => ReactNode;
+  renderWidgetItem?: (props: { widget: WidgetConfig; widgetDef: any; isOffGrid: boolean; hasLayoutIssue: boolean; onEdit: () => void; onRemove: () => void }) => ReactNode;
   renderAddButton?: (props: { onClick: () => void; theme: DisplayConfig['theme'] }) => ReactNode;
   renderEmptyState?: () => ReactNode;
 }
@@ -28,6 +30,8 @@ export default function WidgetsTab({
   placementError,
   offGridIds,
   offGridCount,
+  layoutIssueIds,
+  layoutIssueCount,
   className,
   style,
   renderWidgetItem,
@@ -76,6 +80,12 @@ export default function WidgetsTab({
         </div>
       )}
 
+      {layoutIssueCount > 0 && (
+        <div className="text-xs text-amber-200 bg-amber-500/10 border border-amber-400/30 rounded-lg px-3 py-2">
+          {layoutIssueCount} widget{layoutIssueCount > 1 ? 's show' : ' shows'} clipped content at the current preview size.
+        </div>
+      )}
+
       {config.layout.length === 0 ? (
         renderEmptyState ? renderEmptyState() : (
           <div className="text-center py-8 text-white/30">
@@ -90,9 +100,10 @@ export default function WidgetsTab({
             const widgetDef = getWidget(widget.type);
             if (!widgetDef) return null;
             const isOffGrid = offGridIds.has(widget.id);
+            const hasLayoutIssue = layoutIssueIds.has(widget.id);
 
             if (renderWidgetItem) {
-              return <div key={widget.id}>{renderWidgetItem({ widget, widgetDef, isOffGrid, onEdit: () => setEditingWidget(widget), onRemove: () => removeWidget(widget.id) })}</div>;
+              return <div key={widget.id}>{renderWidgetItem({ widget, widgetDef, isOffGrid, hasLayoutIssue, onEdit: () => setEditingWidget(widget), onRemove: () => removeWidget(widget.id) })}</div>;
             }
 
             return (
@@ -101,6 +112,8 @@ export default function WidgetsTab({
                 className={`rounded-lg p-3 space-y-2 ${
                   isOffGrid
                     ? 'bg-amber-500/10 border border-amber-500/30'
+                    : hasLayoutIssue
+                      ? 'bg-amber-500/10 border border-amber-400/30'
                     : 'bg-[var(--ui-panel-bg)] border border-[color:var(--ui-panel-border)]'
                 }`}
               >
@@ -112,6 +125,11 @@ export default function WidgetsTab({
                       {isOffGrid && (
                         <span className="text-[10px] font-medium text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">
                           OFF GRID
+                        </span>
+                      )}
+                      {!isOffGrid && hasLayoutIssue && (
+                        <span className="text-[10px] font-medium text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded">
+                          CLIPPED
                         </span>
                       )}
                     </div>

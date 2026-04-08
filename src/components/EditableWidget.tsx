@@ -2,6 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { getWidget, type WidgetConfig } from '@firstform/campus-hub-engine';
 import { AppIcon } from '@firstform/campus-hub-engine';
+import {
+  detectWidgetLayoutDiagnostics,
+  EMPTY_WIDGET_LAYOUT_DIAGNOSTICS,
+  equalWidgetLayoutDiagnostics,
+  getWidgetLayoutIssueMessage,
+  hasWidgetLayoutIssue,
+} from '../lib/widget-layout-diagnostics';
 
 interface EditableWidgetProps {
   widget: WidgetConfig;
@@ -12,18 +19,31 @@ interface EditableWidgetProps {
   };
   onEdit: (widgetId: string) => void;
   onDelete: (widgetId: string) => void;
+  onLayoutIssueChange?: (widgetId: string, hasLayoutIssue: boolean) => void;
 }
 
-export default function EditableWidget({ widget, theme, onEdit, onDelete }: EditableWidgetProps) {
+export default function EditableWidget({
+  widget,
+  theme,
+  onEdit,
+  onDelete,
+  onLayoutIssueChange,
+}: EditableWidgetProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [layoutDiagnostics, setLayoutDiagnostics] = useState(
+    EMPTY_WIDGET_LAYOUT_DIAGNOSTICS,
+  );
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const anchorRectRef = useRef<DOMRect | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const widgetDef = getWidget(widget.type);
   const WidgetComponent = widgetDef?.component;
+  const hasLayoutIssue = hasWidgetLayoutIssue(layoutDiagnostics);
+  const layoutIssueMessage = getWidgetLayoutIssueMessage(layoutDiagnostics);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -99,6 +119,68 @@ export default function EditableWidget({ widget, theme, onEdit, onDelete }: Edit
     window.addEventListener('resize', positionMenu);
     return () => window.removeEventListener('resize', positionMenu);
   }, [showMenu]);
+
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container || typeof window === 'undefined') return;
+
+    let frameId = 0;
+
+    const measure = () => {
+      frameId = 0;
+      const nextDiagnostics = detectWidgetLayoutDiagnostics(container);
+      setLayoutDiagnostics((previous) =>
+        equalWidgetLayoutDiagnostics(previous, nextDiagnostics)
+          ? previous
+          : nextDiagnostics,
+      );
+    };
+
+    const queueMeasure = () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(measure);
+    };
+
+    queueMeasure();
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => queueMeasure())
+        : null;
+    resizeObserver?.observe(container);
+
+    const mutationObserver =
+      typeof MutationObserver !== 'undefined'
+        ? new MutationObserver(() => queueMeasure())
+        : null;
+    mutationObserver?.observe(container, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      characterData: true,
+    });
+
+    container.addEventListener('load', queueMeasure, true);
+    window.addEventListener('resize', queueMeasure);
+
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
+      container.removeEventListener('load', queueMeasure, true);
+      window.removeEventListener('resize', queueMeasure);
+    };
+  }, [widget.id, widget.type, widget.w, widget.h, widget.props]);
+
+  useEffect(() => {
+    onLayoutIssueChange?.(widget.id, hasLayoutIssue);
+  }, [hasLayoutIssue, onLayoutIssueChange, widget.id]);
+
+  useEffect(() => {
+    return () => {
+      onLayoutIssueChange?.(widget.id, false);
+    };
+  }, [onLayoutIssueChange, widget.id]);
 
   if (!WidgetComponent) {
     return (
@@ -201,9 +283,23 @@ export default function EditableWidget({ widget, theme, onEdit, onDelete }: Edit
   return (
     <div className="h-full relative group" onContextMenu={handleContextMenu}>
       {/* Widget Content */}
-      <div className="h-full rounded-xl overflow-hidden" style={{ backgroundColor: `${theme.primary}40` }}>
+      <div
+        ref={contentRef}
+        className={`h-full rounded-xl overflow-hidden ${hasLayoutIssue ? 'ring-2 ring-inset ring-amber-400/80' : ''}`}
+        style={{ backgroundColor: `${theme.primary}40` }}
+        title={hasLayoutIssue ? layoutIssueMessage : undefined}
+      >
         <WidgetComponent config={widget.props} theme={theme} />
       </div>
+
+      {hasLayoutIssue && (
+        <div
+          className="widget-preview-control pointer-events-none absolute top-3 left-3 z-20 rounded-full bg-amber-400 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-950 shadow-sm"
+          title={layoutIssueMessage}
+        >
+          Clipped
+        </div>
+      )}
 
       {/* Drag Handle - leaves edges free for resize handles */}
       <div className="gs-drag-handle absolute inset-4 cursor-move z-10" />

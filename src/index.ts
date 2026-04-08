@@ -47,3 +47,17 @@ export {
   getPreset,
   type Preset,
 } from './lib/presets';
+
+export {
+  detectWidgetLayoutDiagnostics,
+  equalWidgetLayoutDiagnostics,
+  getOverflowEdges,
+  getWidgetLayoutIssueMessage,
+  hasOverflowEdges,
+  hasWidgetLayoutIssue,
+  EMPTY_WIDGET_LAYOUT_DIAGNOSTICS,
+  EMPTY_OVERFLOW_EDGES,
+  type OverflowEdges,
+  type RectLike,
+  type WidgetLayoutDiagnostics,
+} from './lib/widget-layout-diagnostics';

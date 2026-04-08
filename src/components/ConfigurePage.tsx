@@ -19,6 +19,8 @@ import {
 import {
   getAllWidgets,
   getWidget,
+  resolveDisplayPreviewMetrics,
+  buildWidgetInitialProps,
 } from '@firstform/campus-hub-engine';
 import { WidgetEditDialog, EngineThemeProvider } from '@firstform/campus-hub-engine';
 import type { GridStackItem } from '@firstform/campus-hub-engine';
@@ -199,6 +201,7 @@ export default function ConfigurePage({
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
   const [editingWidget, setEditingWidget] = useState<WidgetConfig | null>(null);
   const [placementError, setPlacementError] = useState<string | null>(null);
+  const [widgetLayoutIssues, setWidgetLayoutIssues] = useState<Record<string, true>>({});
   const [gridRows, setGridRows] = useState(DEFAULT_CONFIG.gridRows ?? DEFAULT_GRID_ROWS);
   const [gridCols, setGridCols] = useState(DEFAULT_CONFIG.gridCols ?? DEFAULT_GRID_COLS);
   const [sidebarTab, setSidebarTab] = useState<'widgets' | 'settings' | 'presets'>('widgets');
@@ -423,6 +426,26 @@ export default function ConfigurePage({
       .map((w) => w.id),
   );
   const offGridCount = offGridIds.size;
+  const layoutIssueIds = new Set(Object.keys(widgetLayoutIssues));
+  const layoutIssueCount = layoutIssueIds.size;
+
+  useEffect(() => {
+    const activeIds = new Set(config.layout.map((widget) => widget.id));
+    setWidgetLayoutIssues((previous) => {
+      let changed = false;
+      const next: Record<string, true> = {};
+
+      Object.keys(previous).forEach((id) => {
+        if (activeIds.has(id)) {
+          next[id] = true;
+        } else {
+          changed = true;
+        }
+      });
+
+      return changed ? next : previous;
+    });
+  }, [config.layout]);
 
   const addWidget = useCallback((type: string) => {
     const widgetDef = availableWidgets.find((w) => w.type === type);
@@ -455,12 +478,12 @@ export default function ConfigurePage({
 
       const newWidget: WidgetConfig = {
         id: `${type}-${Date.now()}`,
-        type: type as WidgetConfig['type'],
+        type,
         x: placement.x,
         y: placement.y,
         w: placement.w,
         h: placement.h,
-        props: widgetDef.defaultProps || {},
+        props: buildWidgetInitialProps(widgetDef),
       };
 
       return {
@@ -507,6 +530,23 @@ export default function ConfigurePage({
       setEditingWidget(widget);
     }
   }, [config.layout]);
+
+  const handleLayoutIssueChange = useCallback((widgetId: string, hasLayoutIssue: boolean) => {
+    setWidgetLayoutIssues((previous) => {
+      const alreadyFlagged = !!previous[widgetId];
+
+      if (hasLayoutIssue) {
+        if (alreadyFlagged) return previous;
+        return { ...previous, [widgetId]: true };
+      }
+
+      if (!alreadyFlagged) return previous;
+
+      const next = { ...previous };
+      delete next[widgetId];
+      return next;
+    });
+  }, []);
 
   const handleSaveWidgetOptions = useCallback((widgetId: string, data: Record<string, unknown>, comingSoon: boolean) => {
     setConfig((prev) => ({
@@ -675,10 +715,11 @@ export default function ConfigurePage({
           theme={config.theme}
           onEdit={handleEditWidget}
           onDelete={removeWidget}
+          onLayoutIssueChange={handleLayoutIssueChange}
         />
       );
     },
-    [config.layout, config.theme, handleEditWidget, removeWidget]
+    [config.layout, config.theme, handleEditWidget, handleLayoutIssueChange, removeWidget]
   );
 
   const clampedMobileZoom = Math.min(
@@ -690,16 +731,20 @@ export default function ConfigurePage({
 
   // Calculate proportional margin so preview spacing matches the display at any size
   // At 1080p reference: margin=8px → 16px inter-widget gap, 8px edge spacing
-  const gridMargin = effectivePreviewHeight > 0
-    ? Math.max(2, Math.round(effectivePreviewHeight * 0.0075))
-    : 8;
+  const previewMetrics =
+    effectivePreviewWidth > 0 && effectivePreviewHeight > 0
+      ? resolveDisplayPreviewMetrics({
+          aspectRatio,
+          gridCols,
+          gridRows,
+          displayWidth: effectivePreviewWidth,
+          displayHeight: effectivePreviewHeight,
+        })
+      : null;
 
-  // Calculate cell height based on preview dimensions
-  const cellHeight = effectivePreviewHeight > 0 ? effectivePreviewHeight / gridRows : 80;
-
-  // Scale widget content so it looks the same as the 1080p display reference
-  const REF_HEIGHT = 1080;
-  const contentScale = effectivePreviewHeight > 0 ? effectivePreviewHeight / REF_HEIGHT : 1;
+  const gridMargin = previewMetrics?.gridMargin ?? 8;
+  const cellHeight = previewMetrics?.cellHeight ?? 80;
+  const contentScale = previewMetrics?.contentScale ?? 1;
 
   return (
     <EngineThemeProvider theme={config.theme}>
@@ -770,6 +815,8 @@ export default function ConfigurePage({
           placementError={placementError}
           offGridIds={offGridIds}
           offGridCount={offGridCount}
+          layoutIssueIds={layoutIssueIds}
+          layoutIssueCount={layoutIssueCount}
           recentDashboards={recentDashboards}
           historyState={historyState}
           setHistoryState={setHistoryState}
