@@ -25,6 +25,10 @@ export interface SettingsTabProps {
 }
 
 export default function SettingsTab({ config, setConfig, className, style, renderColorPresetButton, renderInput, renderSwitch }: SettingsTabProps) {
+  const svgPreviewSrc = config.logo?.type === 'svg' && config.logo.value
+    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(config.logo.value)}`
+    : null;
+
   return (
     <div className={`space-y-4 ${className ?? ''}`} style={style}>
       <div>
@@ -99,7 +103,7 @@ export default function SettingsTab({ config, setConfig, className, style, rende
             {config.logo.type === 'url' ? (
               <img src={config.logo.value} alt="Logo preview" className="max-h-12 max-w-full object-contain" />
             ) : (
-              <div className="max-h-12 [&>svg]:max-h-12 [&>svg]:w-auto" dangerouslySetInnerHTML={{ __html: config.logo.value }} />
+              <img src={svgPreviewSrc ?? ''} alt="Logo preview" className="max-h-12 max-w-full object-contain" />
             )}
           </div>
         )}
