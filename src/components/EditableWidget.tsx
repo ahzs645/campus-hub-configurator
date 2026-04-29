@@ -128,7 +128,10 @@ export default function EditableWidget({
 
     const measure = () => {
       frameId = 0;
-      const nextDiagnostics = detectWidgetLayoutDiagnostics(container);
+      const nextDiagnostics = detectWidgetLayoutDiagnostics(container, {
+        includeScrollMetrics: false,
+        tolerance: 2,
+      });
       setLayoutDiagnostics((previous) =>
         equalWidgetLayoutDiagnostics(previous, nextDiagnostics)
           ? previous
