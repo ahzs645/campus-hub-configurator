@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Suspense, lazy, type RefObject } from 'react';
 import type { DisplayConfig } from '../lib/config';
 import type { GridStackItem } from '@firstform/campus-hub-engine';
+import { CustomSelect } from './CustomSelect';
 
 type GridStackWrapperRef = { getItems: () => GridStackItem[] };
 
@@ -98,11 +99,11 @@ export default function EditorArea({
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-xs text-white/60">
                 <span className="text-white/40">Grid</span>
-                <select
+                <CustomSelect
                   id="grid-cols"
-                  value={gridCols}
-                  onChange={(e) => {
-                    const nextCols = Number(e.target.value);
+                  value={String(gridCols)}
+                  onChange={(value) => {
+                    const nextCols = Number(value);
                     const prevCols = gridCols;
                     setGridCols(nextCols);
                     setConfig((prev) => ({
@@ -111,21 +112,16 @@ export default function EditorArea({
                       layout: remapLayout(prev.layout, 'x', prevCols, nextCols),
                     }));
                   }}
+                  options={COL_OPTIONS.map((option) => ({ value: String(option.value), label: `${option.value}c` }))}
                   className="px-2 py-1 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-white/80 text-xs outline-none focus:border-[var(--ui-item-border-hover)]"
                   title="Columns"
-                >
-                  {COL_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.value}c
-                    </option>
-                  ))}
-                </select>
+                />
                 <span className="text-white/30">x</span>
-                <select
+                <CustomSelect
                   id="grid-rows"
-                  value={gridRows}
-                  onChange={(e) => {
-                    const nextRows = Number(e.target.value);
+                  value={String(gridRows)}
+                  onChange={(value) => {
+                    const nextRows = Number(value);
                     const prevRows = gridRows;
                     setGridRows(nextRows);
                     setConfig((prev) => ({
@@ -134,15 +130,10 @@ export default function EditorArea({
                       layout: remapLayout(prev.layout, 'y', prevRows, nextRows),
                     }));
                   }}
+                  options={ROW_OPTIONS.map((option) => ({ value: String(option.value), label: `${option.value}r` }))}
                   className="px-2 py-1 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] text-white/80 text-xs outline-none focus:border-[var(--ui-item-border-hover)]"
                   title="Rows"
-                >
-                  {ROW_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.value}r
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <span className="text-xs text-white/40">
                 Drag to reposition. Handles to resize.

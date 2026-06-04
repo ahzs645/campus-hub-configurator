@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { ReactNode } from 'react';
 import type { DisplayConfig } from '../lib/config';
+import { CustomSelect } from './CustomSelect';
 
 const COLOR_PRESETS = [
   { name: 'Campus Classic', primary: '#035642', accent: '#B79527', background: '#022b21' },
@@ -46,10 +47,9 @@ export default function SettingsTab({ config, setConfig, className, style, rende
       {/* Logo */}
       <div>
         <label className="block text-sm text-white/60 mb-1">Logo</label>
-        <select
+        <CustomSelect
           value={config.logo?.type ?? ''}
-          onChange={(e) => {
-            const val = e.target.value;
+          onChange={(val) => {
             if (!val) {
               setConfig((prev) => {
                 const { logo: _, ...rest } = prev;
@@ -62,12 +62,13 @@ export default function SettingsTab({ config, setConfig, className, style, rende
               }));
             }
           }}
+          options={[
+            { value: '', label: 'None' },
+            { value: 'url', label: 'Image URL' },
+            { value: 'svg', label: 'Raw SVG' },
+          ]}
           className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm mb-2"
-        >
-          <option value="">None</option>
-          <option value="url">Image URL</option>
-          <option value="svg">Raw SVG</option>
-        </select>
+        />
         {config.logo?.type === 'url' && (
           renderInput ? renderInput({ label: 'Logo URL', value: config.logo.value, onChange: (v) => setConfig((prev) => ({ ...prev, logo: { type: 'url', value: v } })), type: 'text', placeholder: 'https://example.com/logo.svg' }) : (
             <input
