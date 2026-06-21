@@ -61,3 +61,13 @@ export {
   type RectLike,
   type WidgetLayoutDiagnostics,
 } from './lib/widget-layout-diagnostics';
+
+export {
+  lintConfig,
+  summarizeFindings,
+  type LintFinding,
+  type LintSeverity,
+  type LintContext,
+  type LintWidgetDef,
+  type LintWidgetField,
+} from './lib/lint';
