@@ -22,7 +22,7 @@ import {
   resolveDisplayPreviewMetrics,
   buildWidgetInitialProps,
 } from '@firstform/campus-hub-engine';
-import { WidgetEditDialog, EngineThemeProvider } from '@firstform/campus-hub-engine';
+import { WidgetEditDialog, EngineThemeProvider, type ContentSource } from '@firstform/campus-hub-engine';
 import type { GridStackItem } from '@firstform/campus-hub-engine';
 import EditableWidget from './EditableWidget';
 import ConfigureHeader from './ConfigureHeader';
@@ -166,6 +166,11 @@ export interface ConfigurePageProps {
   headerActions?: (config: DisplayConfig) => React.ReactNode;
   /** Whether to load/save from URL params and localStorage (default: true) */
   enableBrowserPersistence?: boolean;
+  /**
+   * Content sources the host makes available for linking; enables the widget
+   * edit dialog's SourcePicker and capability chips when provided.
+   */
+  sources?: ContentSource[];
 }
 
 export default function ConfigurePage({
@@ -173,6 +178,7 @@ export default function ConfigurePage({
   onChange,
   headerActions,
   enableBrowserPersistence = true,
+  sources,
 }: ConfigurePageProps = {}) {
   const [config, setConfigRaw] = useState<DisplayConfig>(
     normalizeConfig(initialConfig ?? DEFAULT_CONFIG),
@@ -891,6 +897,7 @@ export default function ConfigurePage({
           widgetType={editingWidget.type}
           initialData={editingWidget.props || {}}
           comingSoon={editingWidget.comingSoon}
+          sources={sources}
           onSave={handleSaveWidgetOptions}
           onClose={() => setEditingWidget(null)}
         />
