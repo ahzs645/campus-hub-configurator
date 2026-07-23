@@ -2,7 +2,10 @@ import type { CSSProperties } from 'react';
 import type { ReactNode } from 'react';
 import { Suspense, lazy, type RefObject } from 'react';
 import type { DisplayConfig } from '../lib/config';
-import type { GridStackItem } from '@firstform/campus-hub-engine';
+import type {
+  GridInteractionMode,
+  GridStackItem,
+} from '@firstform/campus-hub-engine';
 import { CustomSelect } from './CustomSelect';
 
 type GridStackWrapperRef = { getItems: () => GridStackItem[] };
@@ -42,6 +45,9 @@ export interface EditorAreaProps {
   cellHeight: number;
   gridMargin: number;
   contentScale: number;
+  interactionMode?: GridInteractionMode;
+  selectedItemId?: string | null;
+  onItemSelect?: (id: string) => void;
   clampedMobileZoom: number;
   mobileZoom: number;
   setMobileZoom: React.Dispatch<React.SetStateAction<number>>;
@@ -76,6 +82,9 @@ export default function EditorArea({
   cellHeight,
   gridMargin,
   contentScale,
+  interactionMode = 'gridder',
+  selectedItemId,
+  onItemSelect,
   clampedMobileZoom,
   setMobileZoom,
   handleLayoutChange,
@@ -230,7 +239,9 @@ export default function EditorArea({
                 cellHeight={cellHeight}
                 margin={gridMargin}
                 contentScale={contentScale}
-                swapMode="gridder"
+                interactionMode={interactionMode}
+                selectedItemId={selectedItemId}
+                onItemSelect={onItemSelect}
                 onLayoutChange={handleLayoutChange}
                 renderItem={renderGridItem}
               />

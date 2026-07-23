@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeConfig } from './config'
+import { decodeConfig, encodeConfig, normalizeConfig } from './config'
 
 describe('normalizeConfig', () => {
   it('derives tickerEnabled from the layout instead of trusting stale flags', () => {
@@ -94,5 +94,37 @@ describe('normalizeConfig', () => {
     })
 
     expect(normalized.layout[0]?.visibilityCondition).toBeUndefined()
+  })
+
+  it('preserves finite z-indexes, truncates fractions, and falls back to array order', () => {
+    const normalized = normalizeConfig({
+      layout: [
+        { id: 'back', type: 'clock', x: 0, y: 0, w: 2, h: 1, zIndex: -2 },
+        { id: 'front', type: 'clock', x: 0, y: 0, w: 2, h: 1, zIndex: 7.9 },
+        { id: 'legacy', type: 'clock', x: 0, y: 0, w: 2, h: 1 },
+        { id: 'invalid', type: 'clock', x: 0, y: 0, w: 2, h: 1, zIndex: Number.POSITIVE_INFINITY },
+      ],
+    })
+
+    expect(normalized.layout.map((widget) => widget.zIndex)).toEqual([
+      -2,
+      7,
+      2,
+      3,
+    ])
+    expect(normalizeConfig(normalized)).toEqual(normalized)
+  })
+
+  it('round-trips z-indexes through the share URL codec', async () => {
+    const normalized = normalizeConfig({
+      layout: [
+        { id: 'back', type: 'clock', x: 0, y: 0, w: 2, h: 1, zIndex: 0 },
+        { id: 'front', type: 'clock', x: 0, y: 0, w: 2, h: 1, zIndex: 9 },
+      ],
+    })
+
+    const decoded = await decodeConfig(await encodeConfig(normalized))
+
+    expect(decoded).toEqual(normalized)
   })
 })

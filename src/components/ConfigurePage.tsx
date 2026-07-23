@@ -10,6 +10,7 @@ import {
   type ShareUrlMode,
   type WidgetConfig,
 } from '../lib/config';
+import { getWidgetZIndex, reorderWidgetLayers } from '../lib/layers';
 import {
   listDashboardHistory,
   saveDashboardHistory,
@@ -207,6 +208,7 @@ export default function ConfigurePage({
   }, []);
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
   const [editingWidget, setEditingWidget] = useState<WidgetConfig | null>(null);
+  const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   const [placementError, setPlacementError] = useState<string | null>(null);
   const [widgetLayoutIssues, setWidgetLayoutIssues] = useState<Record<string, true>>({});
   const [gridRows, setGridRows] = useState(DEFAULT_CONFIG.gridRows ?? DEFAULT_GRID_ROWS);
@@ -226,6 +228,7 @@ export default function ConfigurePage({
   const hydrateEditorState = useCallback((nextConfig: DisplayConfig) => {
     setConfig(nextConfig);
     setEditingWidget(null);
+    setSelectedWidgetId(null);
     setPlacementError(null);
     setShowShareModal(false);
     setShareUrl('');
@@ -421,6 +424,7 @@ export default function ConfigurePage({
       y: widget.y,
       w: widget.w,
       h: widget.h,
+      zIndex: widget.zIndex,
       minW: widgetDef?.minW,
       minH: widgetDef?.minH,
       maxW: widgetDef?.maxW,
@@ -438,6 +442,9 @@ export default function ConfigurePage({
 
   useEffect(() => {
     const activeIds = new Set(config.layout.map((widget) => widget.id));
+    setSelectedWidgetId((current) =>
+      current && !activeIds.has(current) ? null : current,
+    );
     setWidgetLayoutIssues((previous) => {
       let changed = false;
       const next: Record<string, true> = {};
@@ -458,50 +465,54 @@ export default function ConfigurePage({
     const widgetDef = availableWidgets.find((w) => w.type === type);
     if (!widgetDef) return;
 
-    setConfig((prev) => {
-      const minW = widgetDef.minW ?? 1;
-      const minH = widgetDef.minH ?? 1;
-      const maxW = widgetDef.maxW ?? gridCols;
-      const maxH = widgetDef.maxH ?? gridRows;
-      const desiredW = Math.min(widgetDef.defaultW, maxW, gridCols);
-      const desiredH = Math.min(widgetDef.defaultH, maxH, gridRows);
+    const minW = widgetDef.minW ?? 1;
+    const minH = widgetDef.minH ?? 1;
+    const maxW = widgetDef.maxW ?? gridCols;
+    const maxH = widgetDef.maxH ?? gridRows;
+    const desiredW = Math.min(widgetDef.defaultW, maxW, gridCols);
+    const desiredH = Math.min(widgetDef.defaultH, maxH, gridRows);
+    const placement = findPlacement(
+      config.layout,
+      gridCols,
+      gridRows,
+      desiredW,
+      desiredH,
+      minW,
+      minH
+    );
 
-      const placement = findPlacement(
-        prev.layout,
-        gridCols,
-        gridRows,
-        desiredW,
-        desiredH,
-        minW,
-        minH
-      );
+    if (!placement) {
+      setPlacementError('No space available. Move or resize a widget to make room.');
+      return;
+    }
 
-      if (!placement) {
-        setPlacementError('No space available. Move or resize a widget to make room.');
-        return prev;
-      }
+    const newWidget: WidgetConfig = {
+      id: `${type}-${Date.now()}`,
+      type,
+      x: placement.x,
+      y: placement.y,
+      w: placement.w,
+      h: placement.h,
+      zIndex:
+        Math.max(
+          -1,
+          ...config.layout.map((widget, index) => getWidgetZIndex(widget, index)),
+        ) + 1,
+      props: buildWidgetInitialProps(widgetDef),
+    };
 
-      setPlacementError(null);
-
-      const newWidget: WidgetConfig = {
-        id: `${type}-${Date.now()}`,
-        type,
-        x: placement.x,
-        y: placement.y,
-        w: placement.w,
-        h: placement.h,
-        props: buildWidgetInitialProps(widgetDef),
-      };
-
-      return {
-        ...prev,
-        layout: [...prev.layout, newWidget],
-      };
-    });
-  }, [availableWidgets, gridRows]);
+    setPlacementError(null);
+    setSelectedWidgetId(newWidget.id);
+    setConfig((prev) => ({
+      ...prev,
+      layout: [...prev.layout, newWidget],
+    }));
+  }, [availableWidgets, config.layout, gridCols, gridRows]);
 
   const removeWidget = useCallback((id: string) => {
     setPlacementError(null);
+    setSelectedWidgetId((current) => (current === id ? null : current));
+    setEditingWidget((current) => (current?.id === id ? null : current));
     setConfig((prev) => {
       const nextLayout = prev.layout.filter((w) => w.id !== id);
       return {
@@ -509,7 +520,15 @@ export default function ConfigurePage({
         layout: nextLayout,
       };
     });
-  }, [placementError]);
+  }, []);
+
+  const handleLayerReorder = useCallback((activeId: string, overId: string) => {
+    setSelectedWidgetId(activeId);
+    setConfig((prev) => ({
+      ...prev,
+      layout: reorderWidgetLayers(prev.layout, activeId, overId),
+    }));
+  }, []);
 
   const handleLayoutChange = useCallback((items: GridStackItem[]) => {
     if (placementError) setPlacementError(null);
@@ -534,6 +553,7 @@ export default function ConfigurePage({
   const handleEditWidget = useCallback((widgetId: string) => {
     const widget = config.layout.find((w) => w.id === widgetId);
     if (widget) {
+      setSelectedWidgetId(widget.id);
       setEditingWidget(widget);
     }
   }, [config.layout]);
@@ -836,6 +856,9 @@ export default function ConfigurePage({
           offGridCount={offGridCount}
           layoutIssueIds={layoutIssueIds}
           layoutIssueCount={layoutIssueCount}
+          selectedWidgetId={selectedWidgetId}
+          onSelectWidget={setSelectedWidgetId}
+          onReorderWidgets={handleLayerReorder}
           recentDashboards={recentDashboards}
           historyState={historyState}
           setHistoryState={setHistoryState}
@@ -863,6 +886,9 @@ export default function ConfigurePage({
           cellHeight={cellHeight}
           gridMargin={gridMargin}
           contentScale={contentScale}
+          interactionMode="overlap"
+          selectedItemId={selectedWidgetId}
+          onItemSelect={setSelectedWidgetId}
           clampedMobileZoom={clampedMobileZoom}
           mobileZoom={mobileZoom}
           setMobileZoom={setMobileZoom}

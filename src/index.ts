@@ -34,6 +34,12 @@ export {
 } from './lib/config';
 
 export {
+  getWidgetZIndex,
+  reorderWidgetLayers,
+  sortWidgetLayers,
+} from './lib/layers';
+
+export {
   listDashboardHistory,
   saveDashboardHistory,
   clearDashboardHistory,

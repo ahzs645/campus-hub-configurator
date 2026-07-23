@@ -11,6 +11,7 @@ export interface WidgetConfig {
   y: number;
   w: number;
   h: number;
+  zIndex?: number;
   props?: Record<string, unknown>;
   comingSoon?: boolean;
   visibilityCondition?: SimpleVisibilityCondition;
@@ -95,23 +96,26 @@ function finiteNumber(value: unknown, fallback: number): number {
 
 export function normalizeConfig(raw: unknown): DisplayConfig {
   const safe = isRecord(raw) ? raw : {};
-  const layout = Array.isArray(safe.layout)
-    ? safe.layout.map((candidate, index) => {
-        const item = isRecord(candidate) ? candidate : {};
-        const type = typeof item.type === 'string' ? item.type : 'clock';
-        return {
-          id: typeof item.id === 'string' ? item.id : `${type}-${index}`,
-          type,
-          x: finiteNumber(item.x, 0),
-          y: finiteNumber(item.y, 0),
-          w: finiteNumber(item.w, 1),
-          h: finiteNumber(item.h, 1),
-          props: isRecord(item.props) ? item.props : undefined,
-          comingSoon: item.comingSoon === true ? true : undefined,
-          visibilityCondition: normalizeVisibilityCondition(item.visibilityCondition),
-        };
-      })
-    : DEFAULT_CONFIG.layout;
+  const rawLayout = Array.isArray(safe.layout) ? safe.layout : DEFAULT_CONFIG.layout;
+  const layout = rawLayout.map((candidate, index) => {
+    const item = isRecord(candidate) ? candidate : {};
+    const type = typeof item.type === 'string' ? item.type : 'clock';
+    return {
+      id: typeof item.id === 'string' ? item.id : `${type}-${index}`,
+      type,
+      x: finiteNumber(item.x, 0),
+      y: finiteNumber(item.y, 0),
+      w: finiteNumber(item.w, 1),
+      h: finiteNumber(item.h, 1),
+      zIndex:
+        typeof item.zIndex === 'number' && Number.isFinite(item.zIndex)
+          ? Math.trunc(item.zIndex)
+          : index,
+      props: isRecord(item.props) ? item.props : undefined,
+      comingSoon: item.comingSoon === true ? true : undefined,
+      visibilityCondition: normalizeVisibilityCondition(item.visibilityCondition),
+    };
+  });
   const tickerEnabled = layout.some((item) => item.type === 'news-ticker');
   const rawTheme = isRecord(safe.theme) ? safe.theme : {};
 

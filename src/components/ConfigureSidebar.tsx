@@ -21,6 +21,9 @@ export interface ConfigureSidebarProps {
   offGridCount: number;
   layoutIssueIds: Set<string>;
   layoutIssueCount: number;
+  selectedWidgetId?: string | null;
+  onSelectWidget?: (id: string) => void;
+  onReorderWidgets?: (activeId: string, overId: string) => void;
   recentDashboards: DashboardHistoryEntry[];
   historyState: 'loading' | 'ready';
   setHistoryState: (state: 'loading' | 'ready') => void;
@@ -49,6 +52,9 @@ export default function ConfigureSidebar({
   offGridCount,
   layoutIssueIds,
   layoutIssueCount,
+  selectedWidgetId,
+  onSelectWidget,
+  onReorderWidgets,
   recentDashboards,
   historyState,
   setHistoryState,
@@ -116,6 +122,9 @@ export default function ConfigureSidebar({
             offGridCount={offGridCount}
             layoutIssueIds={layoutIssueIds}
             layoutIssueCount={layoutIssueCount}
+            selectedWidgetId={selectedWidgetId}
+            onSelect={onSelectWidget}
+            onReorder={onReorderWidgets}
           />
         )}
 
