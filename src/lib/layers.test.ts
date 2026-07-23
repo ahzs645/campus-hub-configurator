@@ -37,7 +37,7 @@ describe('widget layers', () => {
     expect(getWidgetZIndex(layout[1], 1)).toBe(1)
   })
 
-  it('preserves original array order when layers are tied', () => {
+  it('lists tied layers in browser painting order (later element on top)', () => {
     const layout = [
       widget('first', 3),
       widget('second', 3),
@@ -45,9 +45,9 @@ describe('widget layers', () => {
     ]
 
     expect(sortWidgetLayers(layout).map((item) => item.id)).toEqual([
-      'first',
-      'second',
       'third',
+      'second',
+      'first',
     ])
   })
 
