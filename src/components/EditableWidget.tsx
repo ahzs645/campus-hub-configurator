@@ -304,6 +304,17 @@ export default function EditableWidget({
         </div>
       )}
 
+      {widget.visibilityCondition && (
+        <div
+          className={`widget-preview-control pointer-events-none absolute left-3 z-20 rounded-full bg-amber-400 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-950 shadow-sm ${
+            hasLayoutIssue ? 'top-11' : 'top-3'
+          }`}
+          title={`Visible when ${widget.visibilityCondition.source.key} ${widget.visibilityCondition.operator}`}
+        >
+          Conditional
+        </div>
+      )}
+
       {/* Drag Handle - leaves edges free for resize handles */}
       <div className="gs-drag-handle absolute inset-4 cursor-move z-10" />
 

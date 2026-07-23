@@ -1,4 +1,8 @@
 // Configuration encoding/decoding utilities for URL-based config
+import {
+  normalizeVisibilityCondition,
+  type SimpleVisibilityCondition,
+} from '@firstform/campus-hub-widget-sdk';
 
 export interface WidgetConfig {
   id: string;
@@ -9,6 +13,7 @@ export interface WidgetConfig {
   h: number;
   props?: Record<string, unknown>;
   comingSoon?: boolean;
+  visibilityCondition?: SimpleVisibilityCondition;
 }
 
 export interface LogoConfig {
@@ -80,28 +85,52 @@ export const DEFAULT_CONFIG: DisplayConfig = {
 // Base path is no longer used - site runs at root domain
 export const getBasePath = (): string => '';
 
-export function normalizeConfig(raw: Partial<DisplayConfig> | null | undefined): DisplayConfig {
-  const safe = raw && typeof raw === 'object' ? raw : {};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function finiteNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+export function normalizeConfig(raw: unknown): DisplayConfig {
+  const safe = isRecord(raw) ? raw : {};
   const layout = Array.isArray(safe.layout)
-    ? safe.layout.map((item, index) => ({
-        id: typeof item.id === 'string' ? item.id : `${item.type ?? 'widget'}-${index}`,
-        type: typeof item.type === 'string' ? item.type : 'clock',
-        x: Number.isFinite(item.x) ? item.x : 0,
-        y: Number.isFinite(item.y) ? item.y : 0,
-        w: Number.isFinite(item.w) ? item.w : 1,
-        h: Number.isFinite(item.h) ? item.h : 1,
-        props:
-          item.props && typeof item.props === 'object'
-            ? (item.props as Record<string, unknown>)
-            : undefined,
-        comingSoon: item.comingSoon === true ? true : undefined,
-      }))
+    ? safe.layout.map((candidate, index) => {
+        const item = isRecord(candidate) ? candidate : {};
+        const type = typeof item.type === 'string' ? item.type : 'clock';
+        return {
+          id: typeof item.id === 'string' ? item.id : `${type}-${index}`,
+          type,
+          x: finiteNumber(item.x, 0),
+          y: finiteNumber(item.y, 0),
+          w: finiteNumber(item.w, 1),
+          h: finiteNumber(item.h, 1),
+          props: isRecord(item.props) ? item.props : undefined,
+          comingSoon: item.comingSoon === true ? true : undefined,
+          visibilityCondition: normalizeVisibilityCondition(item.visibilityCondition),
+        };
+      })
     : DEFAULT_CONFIG.layout;
   const tickerEnabled = layout.some((item) => item.type === 'news-ticker');
+  const rawTheme = isRecord(safe.theme) ? safe.theme : {};
 
   return {
     layout,
-    theme: { ...DEFAULT_CONFIG.theme, ...(safe.theme ?? {}) },
+    theme: {
+      primary:
+        typeof rawTheme.primary === 'string'
+          ? rawTheme.primary
+          : DEFAULT_CONFIG.theme.primary,
+      accent:
+        typeof rawTheme.accent === 'string'
+          ? rawTheme.accent
+          : DEFAULT_CONFIG.theme.accent,
+      background:
+        typeof rawTheme.background === 'string'
+          ? rawTheme.background
+          : DEFAULT_CONFIG.theme.background,
+    },
     schoolName:
       typeof safe.schoolName === 'string' && safe.schoolName.trim().length > 0
         ? safe.schoolName
@@ -117,8 +146,7 @@ export function normalizeConfig(raw: Partial<DisplayConfig> | null | undefined):
         ? safe.gridCols
         : undefined,
     logo:
-      safe.logo &&
-      typeof safe.logo === 'object' &&
+      isRecord(safe.logo) &&
       (safe.logo.type === 'svg' || safe.logo.type === 'url') &&
       typeof safe.logo.value === 'string' &&
       safe.logo.value.trim().length > 0

@@ -22,6 +22,7 @@
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0",
     "@firstform/campus-hub-engine": "^0.1.0",
+    "@firstform/campus-hub-widget-sdk": "^0.1.0",
     "@firstform/json-url": "^4.1.0",
     "gridstack": "^12.0.0",
     "lucide-react": ">=0.400.0"

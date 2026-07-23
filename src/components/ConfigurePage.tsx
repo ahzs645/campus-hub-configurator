@@ -21,6 +21,7 @@ import {
   getWidget,
   resolveDisplayPreviewMetrics,
   buildWidgetInitialProps,
+  type SimpleVisibilityCondition,
 } from '@firstform/campus-hub-engine';
 import { WidgetEditDialog, EngineThemeProvider, type ContentSource } from '@firstform/campus-hub-engine';
 import type { GridStackItem } from '@firstform/campus-hub-engine';
@@ -554,11 +555,23 @@ export default function ConfigurePage({
     });
   }, []);
 
-  const handleSaveWidgetOptions = useCallback((widgetId: string, data: Record<string, unknown>, comingSoon: boolean) => {
+  const handleSaveWidgetOptions = useCallback((
+    widgetId: string,
+    data: Record<string, unknown>,
+    comingSoon: boolean,
+    visibilityCondition?: SimpleVisibilityCondition,
+  ) => {
     setConfig((prev) => ({
       ...prev,
       layout: prev.layout.map((widget) =>
-        widget.id === widgetId ? { ...widget, props: data, comingSoon: comingSoon || undefined } : widget
+        widget.id === widgetId
+          ? {
+              ...widget,
+              props: data,
+              comingSoon: comingSoon || undefined,
+              visibilityCondition,
+            }
+          : widget
       ),
     }));
     setEditingWidget(null);
@@ -897,6 +910,7 @@ export default function ConfigurePage({
           widgetType={editingWidget.type}
           initialData={editingWidget.props || {}}
           comingSoon={editingWidget.comingSoon}
+          initialVisibilityCondition={editingWidget.visibilityCondition}
           sources={sources}
           onSave={handleSaveWidgetOptions}
           onClose={() => setEditingWidget(null)}

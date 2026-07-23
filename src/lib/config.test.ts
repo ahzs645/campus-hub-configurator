@@ -50,4 +50,49 @@ describe('normalizeConfig', () => {
       }),
     ])
   })
+
+  it('preserves and round-trips a valid visibility condition', () => {
+    const condition = {
+      source: { kind: 'signal', key: 'emergency' },
+      operator: 'equals',
+      value: true,
+      behavior: 'pulse',
+      autoHideSeconds: 15,
+    } as const
+    const normalized = normalizeConfig({
+      layout: [{
+        id: 'alert-1',
+        type: 'notice',
+        x: 0,
+        y: 0,
+        w: 4,
+        h: 2,
+        visibilityCondition: condition,
+      }],
+    })
+
+    expect(normalized.layout[0]?.visibilityCondition).toEqual(condition)
+    expect(normalizeConfig(normalized)).toEqual(normalized)
+  })
+
+  it('strips a malformed visibility condition', () => {
+    const normalized = normalizeConfig({
+      layout: [{
+        id: 'alert-1',
+        type: 'notice',
+        x: 0,
+        y: 0,
+        w: 4,
+        h: 2,
+        visibilityCondition: {
+          source: { kind: 'other', key: 'emergency' },
+          operator: 'equals',
+          value: true,
+          behavior: 'while-matched',
+        },
+      }],
+    })
+
+    expect(normalized.layout[0]?.visibilityCondition).toBeUndefined()
+  })
 })
