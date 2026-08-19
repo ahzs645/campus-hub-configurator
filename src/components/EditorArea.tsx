@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { ReactNode } from 'react';
-import { Suspense, lazy, type RefObject } from 'react';
+import { Suspense, lazy, useEffect, useRef, type RefObject } from 'react';
 import type { DisplayConfig } from '../lib/config';
 import type {
   GridInteractionMode,
@@ -64,6 +64,14 @@ export interface EditorAreaProps {
   style?: CSSProperties;
   renderEmptyState?: () => ReactNode;
   renderEditorHeader?: (props: { isMobile: boolean; gridCols: number; gridRows: number }) => ReactNode;
+  /**
+   * Canvas behavior when isMobile:
+   * - 'preview': non-interactive preview (default, legacy behavior)
+   * - 'select': tap widgets to select them; drag/resize stays disabled
+   * - 'arrange': gridstack touch drag/resize enabled; canvas pan gestures
+   *   are locked so dragging never fights scrolling
+   */
+  mobileMode?: 'preview' | 'select' | 'arrange';
 }
 
 export default function EditorArea({
@@ -95,7 +103,53 @@ export default function EditorArea({
   style,
   renderEmptyState,
   renderEditorHeader,
+  mobileMode = 'preview',
 }: EditorAreaProps) {
+  // Pinch-to-zoom on the mobile canvas (preview/select modes; in arrange mode
+  // one finger is already committed to gridstack drag). Native listeners with
+  // passive:false — React's synthetic touch handlers can't preventDefault.
+  const zoomRef = useRef(clampedMobileZoom);
+  zoomRef.current = clampedMobileZoom;
+  const pinchEnabled = isMobile && mobileMode !== 'arrange';
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !pinchEnabled) return;
+
+    let pinch: { dist: number; zoom: number } | null = null;
+    const distance = (touches: TouchList) =>
+      Math.hypot(
+        touches[0].clientX - touches[1].clientX,
+        touches[0].clientY - touches[1].clientY,
+      );
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        pinch = { dist: distance(e.touches), zoom: zoomRef.current };
+      }
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!pinch || e.touches.length !== 2) return;
+      e.preventDefault();
+      const scale = distance(e.touches) / pinch.dist;
+      const next = Math.round(pinch.zoom * scale * 100) / 100;
+      setMobileZoom(Math.min(MOBILE_ZOOM_MAX, Math.max(MOBILE_ZOOM_MIN, next)));
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinch = null;
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('touchcancel', onTouchEnd);
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [containerRef, pinchEnabled, setMobileZoom]);
+
   return (
     <main className={`flex-1 flex flex-col min-w-0 overflow-hidden ${className ?? ''}`} style={style}>
       {/* Editor Header */}
@@ -194,11 +248,13 @@ export default function EditorArea({
       <div
         ref={containerRef}
         className={`flex-1 min-h-0 relative scrollbar-hide ${
-          isMobile ? 'overflow-auto mobile-preview' : 'overflow-x-hidden overflow-y-auto'
+          isMobile
+            ? `overflow-auto${mobileMode === 'arrange' ? ' mobile-arrange' : ' mobile-preview'}`
+            : 'overflow-x-hidden overflow-y-auto'
         }`}
         style={{
           backgroundColor: config.theme.background,
-          touchAction: isMobile ? 'pan-x pan-y' : 'auto',
+          touchAction: isMobile ? (mobileMode === 'arrange' ? 'none' : 'pan-x pan-y') : 'auto',
           WebkitOverflowScrolling: 'touch',
         }}
       >
@@ -229,7 +285,7 @@ export default function EditorArea({
           )}
 
           {effectivePreviewWidth > 0 && effectivePreviewHeight > 0 && (
-            <div className={isMobile ? 'pointer-events-none' : ''}>
+            <div className={isMobile && mobileMode === 'preview' ? 'pointer-events-none' : ''}>
               <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-white/30">Loading editor...</div>}>
               <GridStackWrapper
                 ref={gridRef}
