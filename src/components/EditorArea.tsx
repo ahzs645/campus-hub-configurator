@@ -254,7 +254,10 @@ export default function EditorArea({
         }`}
         style={{
           backgroundColor: config.theme.background,
-          touchAction: isMobile ? (mobileMode === 'arrange' ? 'none' : 'pan-x pan-y') : 'auto',
+          // Keep panning in arrange mode too — the drag/resize handles carry
+          // touch-action:none themselves, so a zoomed canvas stays
+          // scrollable while arranging.
+          touchAction: isMobile ? 'pan-x pan-y' : 'auto',
           WebkitOverflowScrolling: 'touch',
         }}
       >

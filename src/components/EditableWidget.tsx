@@ -49,7 +49,7 @@ export default function EditableWidget({
   useEffect(() => {
     if (!showMenu) return;
 
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: Event) => {
       if (
         menuRef.current &&
         !menuRef.current.contains(e.target as Node) &&
@@ -61,8 +61,9 @@ export default function EditableWidget({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // pointerdown (not mousedown) so taps dismiss the menu on touch too.
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [showMenu]);
 
   const handleMenuClick = (e: React.MouseEvent) => {
@@ -77,6 +78,15 @@ export default function EditableWidget({
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // On touch, contextmenu comes from a long press (Android). The desktop
+    // menu doesn't belong there — the mobile shell has its own selection
+    // actions — so only suppress the native callout.
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(pointer: coarse)').matches
+    ) {
+      return;
+    }
     // Create a zero-size rect at cursor position so the menu appears there
     anchorRectRef.current = new DOMRect(e.clientX, e.clientY, 0, 0);
     setShowMenu(true);
