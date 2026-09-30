@@ -253,7 +253,10 @@ export default function EditorArea({
             : 'overflow-x-hidden overflow-y-auto'
         }`}
         style={{
-          backgroundColor: config.theme.background,
+          // No theme colour here: the scroll area is taller than the display
+          // (much taller on phones), and filling it made the canvas look that
+          // tall too. The theme background is painted inside the display
+          // rect below, so the host's own background frames it.
           // Keep panning in arrange mode too — the drag/resize handles carry
           // touch-action:none themselves, so a zoomed canvas stays
           // scrollable while arranging.
@@ -261,15 +264,30 @@ export default function EditorArea({
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        {/* GridStack container — centered horizontally, top-aligned */}
+        {/* GridStack container — centered horizontally, top-aligned.
+            `isolate` keeps the -z background layer above the host page. */}
         <div
-          className="mx-auto relative"
+          className="mx-auto relative isolate"
           data-template-preview-capture="true"
           style={{
             width: effectivePreviewWidth || '100%',
             minHeight: effectivePreviewHeight || undefined,
           }}
         >
+          {/* Theme background, exactly the size of the display. Widgets moved
+              past the boundary sit on the neutral surround, which reads as
+              "off the display". */}
+          {effectivePreviewWidth > 0 && effectivePreviewHeight > 0 && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-0 top-0 -z-10 pointer-events-none rounded-sm"
+              style={{
+                height: effectivePreviewHeight,
+                backgroundColor: config.theme.background,
+              }}
+            />
+          )}
+
           {/* Export boundary indicator */}
           {effectivePreviewWidth > 0 && effectivePreviewHeight > 0 && (
             <div
