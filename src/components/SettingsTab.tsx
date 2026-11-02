@@ -135,20 +135,10 @@ export default function SettingsTab({ config, setConfig, className, style, rende
         )}
       </div>
 
-      {/* CORS Proxy */}
-      <div>
-        <label className="block text-sm text-white/60 mb-1">CORS Proxy</label>
-        <p className="text-xs text-white/40 mb-1">Base URL for proxying cross-origin widget requests</p>
-        {renderInput ? renderInput({ label: 'CORS Proxy', value: config.corsProxy ?? '', onChange: (v) => setConfig((prev) => ({ ...prev, corsProxy: v || undefined })), type: 'text', placeholder: 'https://cors.example.workers.dev/' }) : (
-          <input
-            type="text"
-            placeholder="https://cors.example.workers.dev/"
-            value={config.corsProxy ?? ''}
-            onChange={(e) => setConfig((prev) => ({ ...prev, corsProxy: e.target.value || undefined }))}
-            className="w-full px-3 py-2 rounded-lg bg-[var(--ui-item-bg)] border border-[color:var(--ui-item-border)] focus:border-[var(--ui-item-border-hover)] outline-none text-sm"
-          />
-        )}
-      </div>
+      {/* No per-display CORS proxy control: widgets proxy through the SDK's
+          buildProxyUrl, which only uses the deployment-wide
+          VITE_CORS_PROXY_URL, so a per-display value was never applied.
+          `corsProxy` stays in DisplayConfig so saved configs still load. */}
 
       <div>
         <label className="block text-sm text-white/60 mb-2">Color Presets</label>

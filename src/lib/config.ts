@@ -36,6 +36,10 @@ export interface DisplayConfig {
   gridCols?: number;
   logo?: LogoConfig;
   aspectRatio?: number;
+  /**
+   * Legacy per-display proxy. Kept so saved configs round-trip, but not
+   * applied: widgets use the deployment-wide VITE_CORS_PROXY_URL.
+   */
   corsProxy?: string;
 }
 
