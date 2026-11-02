@@ -305,23 +305,26 @@ export default function EditableWidget({
         <WidgetComponent config={widget.props} theme={theme} />
       </div>
 
-      {hasLayoutIssue && (
-        <div
-          className="widget-preview-control pointer-events-none absolute top-3 left-3 z-20 rounded-full bg-amber-400 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-950 shadow-sm"
-          title={layoutIssueMessage}
-        >
-          Clipped
-        </div>
-      )}
-
-      {widget.visibilityCondition && (
-        <div
-          className={`widget-preview-control pointer-events-none absolute left-3 z-20 rounded-full bg-amber-400 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-950 shadow-sm ${
-            hasLayoutIssue ? 'top-11' : 'top-3'
-          }`}
-          title={`Visible when ${widget.visibilityCondition.source.key} ${widget.visibilityCondition.operator}`}
-        >
-          Conditional
+      {/* Status badges sit bottom-left: widget titles live at the top, and
+          the content a "Clipped" widget loses is at the bottom anyway. */}
+      {(hasLayoutIssue || widget.visibilityCondition) && (
+        <div className="widget-preview-control pointer-events-none absolute bottom-2 left-2 z-20 flex gap-1">
+          {hasLayoutIssue && (
+            <div
+              className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 shadow-sm"
+              title={layoutIssueMessage}
+            >
+              Clipped
+            </div>
+          )}
+          {widget.visibilityCondition && (
+            <div
+              className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 shadow-sm"
+              title={`Visible when ${widget.visibilityCondition.source.key} ${widget.visibilityCondition.operator}`}
+            >
+              Conditional
+            </div>
+          )}
         </div>
       )}
 
@@ -332,14 +335,15 @@ export default function EditableWidget({
       <button
         ref={buttonRef}
         onClick={handleMenuClick}
-        className={`widget-preview-control absolute top-3 right-3 z-30 p-2.5 rounded-xl transition-all ${
+        className={`widget-preview-control absolute top-1.5 right-1.5 z-30 p-1 rounded-md shadow-sm backdrop-blur-sm transition-all ${
           showMenu
             ? 'bg-white text-gray-900'
-            : 'bg-black/70 text-white opacity-0 group-hover:opacity-100 hover:bg-black/90'
+            : 'bg-black/60 text-white opacity-0 group-hover:opacity-100 hover:bg-black/85'
         }`}
         title="Widget options"
+        aria-label="Widget options"
       >
-        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
         </svg>
       </button>
