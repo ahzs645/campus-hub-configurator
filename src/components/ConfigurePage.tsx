@@ -25,6 +25,11 @@ import {
   type SimpleVisibilityCondition,
 } from '@firstform/campus-hub-engine';
 import { WidgetEditDialog, EngineThemeProvider, type ContentSource } from '@firstform/campus-hub-engine';
+import {
+  SourcePickerProvider,
+  useSourcePicker,
+  type SourcePickerFn,
+} from '@firstform/campus-hub-widget-sdk';
 import type { GridStackItem } from '@firstform/campus-hub-engine';
 import EditableWidget from './EditableWidget';
 import ConfigureHeader from './ConfigureHeader';
@@ -169,10 +174,17 @@ export interface ConfigurePageProps {
   /** Whether to load/save from URL params and localStorage (default: true) */
   enableBrowserPersistence?: boolean;
   /**
-   * Content sources the host makes available for linking; enables the widget
-   * edit dialog's SourcePicker and capability chips when provided.
+   * Saved content sources the host makes available for linking. An empty
+   * library still offers the source workflow supplied by `onPickSource` or
+   * an enclosing SourcePickerProvider.
    */
   sources?: ContentSource[];
+  /**
+   * Open the host's shared source library, store or creation dialog. Call
+   * request.onSelect only after a source has been saved successfully.
+   * Omit to inherit the enclosing SourcePickerProvider.
+   */
+  onPickSource?: SourcePickerFn;
 }
 
 export default function ConfigurePage({
@@ -181,7 +193,9 @@ export default function ConfigurePage({
   headerActions,
   enableBrowserPersistence = true,
   sources,
+  onPickSource,
 }: ConfigurePageProps = {}) {
+  const inheritedSourcePicker = useSourcePicker();
   const [config, setConfigRaw] = useState<DisplayConfig>(
     normalizeConfig(initialConfig ?? DEFAULT_CONFIG),
   );
@@ -786,6 +800,7 @@ export default function ConfigurePage({
   const contentScale = previewMetrics?.contentScale ?? 1;
 
   return (
+    <SourcePickerProvider value={onPickSource ?? inheritedSourcePicker}>
     <EngineThemeProvider theme={config.theme}>
     <div
       className="h-screen flex flex-col text-white overflow-hidden"
@@ -944,5 +959,7 @@ export default function ConfigurePage({
       )}
     </div>
     </EngineThemeProvider>
+    </SourcePickerProvider>
   );
 }
+
