@@ -152,7 +152,7 @@ export default function PresetsTab({
         <h2 className="font-bold text-lg flex items-center gap-2">
           <span className="text-[var(--color-accent)]">Demo Presets</span>
         </h2>
-        <p className="text-xs text-white/50">Load a pre-built layout to get started quickly</p>
+        <p className="text-xs text-white/50">Start with a sample layout, then open a widget to choose a saved source or add one.</p>
         <div className="grid grid-cols-2 gap-2">
           {DEMO_PRESETS.map((preset) => {
             const handleClick = () => hydrateEditorState(normalizeConfig(preset.config));
@@ -208,3 +208,4 @@ export default function PresetsTab({
     </div>
   );
 }
+

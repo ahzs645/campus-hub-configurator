@@ -190,12 +190,13 @@ function SortableWidgetLayer({
         </span>
       </button>
       <div className="flex items-center gap-1">
-        {widgetDef?.OptionsComponent && (
+        {widgetDef && (
           <button
             type="button"
             onClick={handleEdit}
             className="flex h-7 w-7 items-center justify-center rounded-md text-white/50 transition-colors hover:bg-[var(--ui-item-hover)] hover:text-white"
             title="Configure"
+            aria-label={`Configure ${widgetName}`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
@@ -348,3 +349,4 @@ export default function WidgetsTab({
     </div>
   );
 }
+
